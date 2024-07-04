@@ -30,7 +30,6 @@ if resolution_choice == 1 or resolution_choice == 2:
     stream.download(filename="video_1.mp4")
     print("\nDownload complete!")
 
-
 model = whisper.load_model("base")
 result = model.transcribe(f"video_1.mp4")
 with open(f"video_1.txt", "w") as file:
