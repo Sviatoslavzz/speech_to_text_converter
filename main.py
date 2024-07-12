@@ -11,10 +11,10 @@ warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using F
 
 def collect_links() -> list:
     links = []
-    print("Please provide YouTube video links each on new line then write done:")
+    print("Please provide YouTube video links each on new and press enter:")
     links.append(input())
     link = input()
-    while link != "done":
+    while link != "":
         links.append(link)
         link = input()
     return links
@@ -44,7 +44,9 @@ def main():
     start_t = time.time()
     model = whisper.load_model("base")
 
-    max_workers = 4
+    max_workers = len(links)
+    if max_workers > 4:
+        max_workers = 4
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = []
         link_iter = iter(links)
@@ -63,7 +65,7 @@ def main():
                 try:
                     future.result()  # This will raise any exceptions encountered in transcribe
                     completed_count += 1
-                    print(f"whisper completed {completed_count}/{len(links)}")
+                    print(f"whisper completed {completed_count}/{len(links)}\n")
                 except Exception as e:
                     print(f"Error processing link: {e}")
 

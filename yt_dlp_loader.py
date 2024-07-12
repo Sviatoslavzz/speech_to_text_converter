@@ -18,7 +18,9 @@ class Yt_loader:
 
     def __del__(self):
         if self._title.endswith(".mp3"):
-            remove(self._title + ".mp3")
+            remove(self._title)
+        if self._title.endswith(".webm"):
+            remove(self._title)
 
     def get_title(self) -> (str, bool):
         try:
@@ -53,11 +55,11 @@ class Yt_loader:
             try:
                 with yt_dlp.YoutubeDL(self._ydl_opts) as ydl:
                     ydl.download([self.link])
-                    return f'{self._title}.mp3', True
+                    self._title = self._title + ".mp3"
+                    return f'{self._title}', True
             except yt_dlp.utils.DownloadError:
                 print(f'An error occurred while downloading audio for: "{self.link}"')
-                if self._title.endswith(".webm"):
-                    remove(self._title + ".webm")
+                self._title = self._title + ".webm"
                 return "", False
         else:
             print(f'provided link is not valid: "{self.link}"')
