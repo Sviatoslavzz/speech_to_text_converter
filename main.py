@@ -1,37 +1,34 @@
-import whisper
 # from pytube_loader import Loader
-from yt_dlp_loader import Yt_loader
 import time
 import warnings
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from channel_link_collector import get_channel_videos, get_channel_id_by_name
+from transcriber import Transcriber
 
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
 
 
 def collect_links() -> list:
     links = []
-    print("Please provide YouTube video links each on new and press enter:")
-    links.append(input())
-    link = input()
-    while link != "":
-        links.append(link)
+    channel_link = input(
+        """You can enter a channel link to collect all videos from a channel, """
+        """or press enter to proceed with simple links:\n""")
+    if "youtube.com" in channel_link:
+        try:
+            amount, links = get_channel_videos(get_channel_id_by_name(channel_link))
+            print(f"Собрано {amount} ссылок на видео")
+        except ValueError as e:
+            print(f"Ups: {e}")
+    else:
+        print("Please provide YouTube video links each on new and press enter:")
+        links.append(input())
         link = input()
+        while link != "":
+            if "youtube.com" in link:
+                links.append(link)
+            link = input()
     return links
-
-
-def transcribe(directory: str, link: str, model):
-    loader = Yt_loader(link)
-    title, is_loaded = loader.download_audio()
-    if is_loaded:
-        result = model.transcribe(title)
-        if title.endswith(".mp3"):
-            title = title.replace(".mp3", ".txt")
-            with open(f'{directory}/{title}', "w") as file:
-                file.write(result['text'])
-            print(f"Transcription saved\ntitle: {title}\n")
-        else:
-            print("Please check audio extension")
 
 
 def main():
@@ -40,10 +37,11 @@ def main():
         os.makedirs(directory)
 
     links = collect_links()
+
     print("starting loop...")
     start_t = time.time()
-    model = whisper.load_model("base")
-
+    # model = whisper.load_model("base")
+    transcriber = Transcriber()
     max_workers = len(links)
     if max_workers > 4:
         max_workers = 4
@@ -54,7 +52,7 @@ def main():
         for _ in range(max_workers):
             try:
                 link = next(link_iter)
-                futures.append(executor.submit(transcribe, directory, link, model))
+                futures.append(executor.submit(transcriber.transcribe, directory, link))
             except StopIteration:
                 break
 
@@ -72,13 +70,9 @@ def main():
                 # Submit a new task if there are more links to process
                 try:
                     link = next(link_iter)
-                    futures.append(executor.submit(transcribe, directory, link, model))
+                    futures.append(executor.submit(transcriber.transcribe, directory, link))
                 except StopIteration:
                     continue
-
-    # for i, link in enumerate(links, start=1):
-    #     print(f"whisper started {i}/{len(links)}...")
-    #     transcribe(directory, link, model)
 
     print(f"total time : {round(time.time() - start_t, 2)} sec.")
 
