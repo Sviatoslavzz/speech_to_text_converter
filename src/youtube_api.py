@@ -7,6 +7,11 @@ youtube = build('youtube', 'v3', developerKey=YT_API)
 
 
 def get_channel_id_by_name(link: str) -> str:
+    """
+    Searches a YouTube channel by name and returns its ID.
+    :param link: YouTube channel link
+    :return: channel id
+    """
     channel_name = [i for i in link.split("/") if i.startswith("@")]
 
     # Search for the channel by name
@@ -30,6 +35,9 @@ def get_channel_videos(channel_id: str) -> Tuple[int, List[str]]:
     videos = []
     next_page_token = None
 
+    print("Collecting video links process started...")
+
+    amount = 0
     while True:
         # Fetch the playlist ID for the channel's uploads
         request = youtube.channels().list(
@@ -48,7 +56,6 @@ def get_channel_videos(channel_id: str) -> Tuple[int, List[str]]:
         )
         response = request.execute()
 
-        amount = 0
         for item in response['items']:
             video_id = item['snippet']['resourceId']['videoId']
             amount += 1

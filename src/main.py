@@ -1,12 +1,22 @@
 # from pytube_loader import Loader
-import time
 import warnings
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from channel_link_collector import get_channel_videos, get_channel_id_by_name
+
+from captions import get_caption_by_link
+from youtube_api import get_channel_videos, get_channel_id_by_name
 from transcriber import Transcriber
+from objects import DownloadOptions
+from yt_dlp_loader import Yt_loader
 
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
+
+
+def make_save_dir() -> str:
+    dir_ = '../saved_files'
+    if not os.path.exists(dir_):
+        os.makedirs(dir_)
+    return dir_
 
 
 def collect_links() -> list:
@@ -31,16 +41,26 @@ def collect_links() -> list:
     return links
 
 
-def main():
-    directory = 'saved_files'
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+def menu():
+    option = -1
+    while option != '4' and option != "exit":
+        print("Please choose options to continue\n1. Download text\n2. Download audio\n3. Download video\n4. Exit")
+        option = input()
 
-    links = collect_links()
+        if not option.isdigit():
+            option = -1
 
-    print("starting loop...")
-    start_t = time.time()
-    # model = whisper.load_model("base")
+        if int(option) == DownloadOptions.TEXT.value:
+            return DownloadOptions.TEXT
+        elif int(option) == DownloadOptions.AUDIO.value:
+            return DownloadOptions.AUDIO
+        elif int(option) == DownloadOptions.VIDEO.value:
+            return DownloadOptions.VIDEO
+        elif option != '4' and option != "exit":
+            print("Sorry, you entered a wrong option")
+
+
+def create_pool(directory: str, links: list):
     transcriber = Transcriber()
     max_workers = len(links)
     if max_workers > 4:
@@ -52,7 +72,8 @@ def main():
         for _ in range(max_workers):
             try:
                 link = next(link_iter)
-                futures.append(executor.submit(transcriber.transcribe, directory, link))
+                print("starting loop...")
+                futures.append(executor.submit(transcriber.transcribe_audio, directory, link))
             except StopIteration:
                 break
 
@@ -70,11 +91,32 @@ def main():
                 # Submit a new task if there are more links to process
                 try:
                     link = next(link_iter)
-                    futures.append(executor.submit(transcriber.transcribe, directory, link))
+                    futures.append(executor.submit(transcriber.transcribe_audio, directory, link))
                 except StopIteration:
                     continue
 
-    print(f"total time : {round(time.time() - start_t, 2)} sec.")
+
+def main():
+    directory = make_save_dir()
+    links = collect_links()
+
+    if not links:
+        print(">> You did not enter any link! <<")
+        return
+
+    menu_opt = menu()
+    if menu_opt == DownloadOptions.TEXT:
+        # create_pool(directory, links)
+        get_caption_by_link(directory, links)
+    elif menu_opt == DownloadOptions.VIDEO:
+        quality = input("Enter a quality e.g. 720p: ")
+        for link in links:
+            loader = Yt_loader(link, directory)
+            loader.download_video(link, quality=quality)
+    elif menu_opt == DownloadOptions.AUDIO:
+        for link in links:
+            loader = Yt_loader(link, directory)
+            loader.download_audio(link)
 
 
 if __name__ == "__main__":
