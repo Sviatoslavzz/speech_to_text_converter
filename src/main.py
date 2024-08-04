@@ -2,6 +2,7 @@
 import warnings
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import asyncio
 
 from captions import get_caption_by_link
 from youtube_api import get_channel_videos, get_channel_id_by_name
@@ -26,17 +27,16 @@ def collect_links() -> list:
         """or press enter to proceed with simple links:\n""")
     if "youtube.com" in channel_link:
         try:
-            amount, links = get_channel_videos(get_channel_id_by_name(channel_link))
+            amount, links = get_channel_videos(get_channel_id_by_name(channel_link.strip()))
             print(f"Собрано {amount} ссылок на видео")
         except ValueError as e:
             print(f"Ups: {e}")
     else:
-        print("Please provide YouTube video links each on new and press enter:")
-        links.append(input())
+        print("Please provide YouTube video links each on new line and press enter:")
         link = input()
         while link != "":
             if "youtube.com" in link:
-                links.append(link)
+                links.append(link.strip())
             link = input()
     return links
 
@@ -60,40 +60,16 @@ def menu():
             print("Sorry, you entered a wrong option")
 
 
-def create_pool(directory: str, links: list):
+async def process_links(directory: str, links: list) -> None:
+    tasks = []
     transcriber = Transcriber()
-    max_workers = len(links)
-    if max_workers > 4:
-        max_workers = 4
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = []
-        link_iter = iter(links)
+    for link in links:
+        tasks.append(get_caption_by_link(directory, link))
 
-        for _ in range(max_workers):
-            try:
-                link = next(link_iter)
-                print("starting loop...")
-                futures.append(executor.submit(transcriber.transcribe_audio, directory, link))
-            except StopIteration:
-                break
-
-        completed_count = 0
-        while futures:
-            for future in as_completed(futures):
-                futures.remove(future)
-                try:
-                    future.result()  # This will raise any exceptions encountered in transcribe
-                    completed_count += 1
-                    print(f"whisper completed {completed_count}/{len(links)}\n")
-                except Exception as e:
-                    print(f"Error processing link: {e}")
-
-                # Submit a new task if there are more links to process
-                try:
-                    link = next(link_iter)
-                    futures.append(executor.submit(transcriber.transcribe_audio, directory, link))
-                except StopIteration:
-                    continue
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    for link, result in zip(links, results):
+        if not result:
+            await asyncio.get_event_loop().run_in_executor(None, transcriber.transcribe_audio, directory, link)
 
 
 def main():
@@ -106,16 +82,15 @@ def main():
 
     menu_opt = menu()
     if menu_opt == DownloadOptions.TEXT:
-        # create_pool(directory, links)
-        get_caption_by_link(directory, links)
+        asyncio.run(process_links(directory, links))
     elif menu_opt == DownloadOptions.VIDEO:
         quality = input("Enter a quality e.g. 720p: ")
+        loader = Yt_loader(directory)
         for link in links:
-            loader = Yt_loader(link, directory)
             loader.download_video(link, quality=quality)
     elif menu_opt == DownloadOptions.AUDIO:
+        loader = Yt_loader(directory)
         for link in links:
-            loader = Yt_loader(link, directory)
             loader.download_audio(link)
 
 

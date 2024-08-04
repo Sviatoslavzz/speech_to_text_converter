@@ -11,13 +11,15 @@ class Yt_loader:
             'preferredquality': '192',  # Quality in kbps (e.g., 192)
         }],
         'outtmpl': '',  # Output filename template
+        'quiet': True,
     }
     _video_config = {
         'format': 'bestvideo+bestaudio/best',  # the best video and audio quality available
         'outtmpl': '',
+        'quiet': True,
     }
 
-    def __init__(self, link: str, directory: str):
+    def __init__(self, directory: str):
         self.dir = directory
         self._title = "example"
 
@@ -76,14 +78,14 @@ class Yt_loader:
             print(f'provided link is not valid: "{link_}"')
             return "", False
 
-    def download_video(self, link_: str, quality: str = '720p') -> (str, bool):
+    def download_video(self, link_: str, quality: str = "720p") -> (str, bool):
         # TODO как будто бы не видит дефолтные 720p
         self._title, is_valid = self.get_title(link_)
         if not is_valid:
             print(f'provided link is not valid: "{link_}"')
             return "", False
 
-        available_formats = self.list_available_formats(link_)
+        available_formats = self._list_available_formats(link_)
         format_code = None
 
         # Find the format code for the desired quality
@@ -107,7 +109,7 @@ class Yt_loader:
             self._title = self._title + ".webm"
             return "", False
 
-    def list_available_formats(self, link_):
+    def _list_available_formats(self, link_):
         try:
             with yt_dlp.YoutubeDL(self._video_config) as ydl:
                 formats = ydl.extract_info(link_, download=False)['formats']

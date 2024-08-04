@@ -8,8 +8,8 @@ class Transcriber:
         self._model = whisper.load_model("base")
 
     def transcribe_audio(self, directory_: str, link: str):
-        loader = Yt_loader(link, directory_)
-        title, is_loaded = loader.download_audio()
+        loader = Yt_loader(directory_)
+        title, is_loaded = loader.download_audio(link)
         if is_loaded:
             result = self._model.transcribe(f"{directory_}/{title}")
             print(f"Transcribing started {title}")
