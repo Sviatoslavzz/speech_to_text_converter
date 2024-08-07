@@ -13,8 +13,8 @@ class Transcriber:
         if is_loaded:
             result = self._model.transcribe(f"{directory_}/{title}")
             print(f"Transcribing started {title}")
-            if title.endswith(".mp3"):
-                title = title.replace(".mp3", ".txt")
+            if title.endswith((".mp3", ".mp4")):
+                title = title.replace(".mp3", ".txt").replace(".mp4", ".txt")
                 with open(f'{directory_}/{title}', "w") as file:
                     file.write(result['text'])
                 print(f"Transcription saved\ntitle: {title}\n")
