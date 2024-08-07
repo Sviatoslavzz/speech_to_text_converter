@@ -1,7 +1,6 @@
 # from pytube_loader import Loader
 import warnings
 import os
-from concurrent.futures import ProcessPoolExecutor, as_completed
 import asyncio
 
 from captions import get_caption_by_link
@@ -14,7 +13,7 @@ warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using F
 
 
 def make_save_dir() -> str:
-    dir_ = '../saved_files'
+    dir_ = 'saved_files'
     if not os.path.exists(dir_):
         os.makedirs(dir_)
     return dir_

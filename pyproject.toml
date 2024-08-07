@@ -1,0 +1,27 @@
+[project]
+name = "speech_to_text_converter"
+version = "1.0.0"
+description = "rpoject aims to convert speech, received from youtube link to text and save it to the file"
+readme = "README.md"
+authors = [{name = "Sviatoslav Zaikin"}]
+
+dependencies = [
+    "openai_whisper==20231117",
+#    "six>=1.16.0",
+    "numpy<2",
+    "yt_dlp>=2024.7.9",
+    "youtube-transcript-api>=0.6.2",
+    "google-api-core>=2.19.1",
+    "google-api-python-client>=2.140.0",
+]
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+dev = []
+
+
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
