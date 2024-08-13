@@ -10,3 +10,6 @@ install:
 uninstall_all_dependencies:
 	pip freeze | grep -v '^-e' | xargs pip uninstall -y
 	pip cache purge
+
+clean:
+	rm -rf *.egg_info saved_files

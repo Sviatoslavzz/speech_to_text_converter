@@ -9,7 +9,8 @@ warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using F
 class WhisperTranscriber(AbstractTranscriber):
 
     def __init__(self, model):
-        super().__init__(model)
+        self.validate_model(model)
+        self.model = model
 
     def transcribe(self, path: str) -> str:
         model = whisper.load_model(self.model)
