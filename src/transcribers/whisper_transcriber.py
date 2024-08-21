@@ -1,4 +1,5 @@
 import warnings
+from loguru import logger
 
 import whisper
 from transcribers.abscract import AbstractTranscriber
@@ -9,11 +10,16 @@ warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using F
 class WhisperTranscriber(AbstractTranscriber):
 
     def __init__(self, model):
-        self.validate_model(model)
+        if not self.validate_model(model):
+            logger.error(f"Model {model} is not valid")
+            raise ValueError(f"Model {model} is not valid")
+
         self.model = model
+        logger.info(f"WhisperTranscriber init with a model {self.model}")
 
     def transcribe(self, path: str) -> str:
         model = whisper.load_model(self.model)
+        logger.info("WhisperTranscriber transcription started")
         result = model.transcribe(path)
 
         return result['text']

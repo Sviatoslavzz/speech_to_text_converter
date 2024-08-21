@@ -1,6 +1,10 @@
 import warnings
 import os
 import asyncio
+from loguru import logger
+from pathlib import Path
+
+from numpy.ma.core import absolute
 
 from captions import get_caption_by_link
 from youtube_api import get_channel_videos, get_channel_id_by_name
@@ -12,11 +16,37 @@ from yt_dlp_loader import Yt_loader
 
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
 
+WHISPER_MODEL = "small"
+SAVING_FOLDER = "saved_files"
+WHISPER__FORMATS = [
+    "mp3",
+    "mp4",
+    "mpeg",
+    "mpga",
+    "m4a",
+    "wav",
+    "webm",
+    "mov"
+]
+FASTER_WHISPER__FORMATS = [
+    "mp3",
+    "mp4",
+    "m4a",
+    "wav",
+    "webm",
+    "mov",
+    "ogg",
+    "opus"
+]
 
-def make_save_dir() -> str:
-    dir_ = 'saved_files'
-    if not os.path.exists(dir_):
-        os.makedirs(dir_)
+
+def make_save_dir() -> Path:
+    absolute_path = Path(__file__).absolute().parent.parent
+    dir_ = Path(f"{absolute_path}/{SAVING_FOLDER}")
+    if not dir_.is_dir():
+        dir_.mkdir()
+        logger.info(f"Saving directory created: {dir_}")
+    logger.info(f"Saving directory set up: {dir_}")
     return dir_
 
 
@@ -60,14 +90,23 @@ def menu():
             print("Sorry, you entered a wrong option")
 
 
-def transcriber_saver(transcriber: AbstractTranscriber, save_dir: str, file_path: str) -> None:
-    result = transcriber.transcribe(path=f'{save_dir}/{file_path}')
-    # TODO validate file format
-    file_path = file_path.replace('.mp3', '.txt')
-    file_path = file_path.replace('.mp4', '.txt')
-    with open(f'{save_dir}/{file_path}', "w") as file:
+def transcriber_saver(transcriber: AbstractTranscriber, save_dir: Path, file_path: str) -> None:
+    file_name = Path(f"{save_dir}/{file_path}")
+    if not file_name.is_file():
+        logger.error(f"File does not exist: {file_name}")
+        raise FileNotFoundError(f"{file_name} not found")
+
+    file_suf = file_name.suffix
+    if file_suf.lstrip('.') not in WHISPER__FORMATS:
+        logger.error(f"File format is not supported: {file_suf}")
+        raise NotImplementedError
+
+    result = transcriber.transcribe(path=file_name.__fspath__())
+
+    target_file = file_name.__fspath__().replace(file_suf, '.txt')
+    with open(target_file, "w") as file:
         file.write(result)
-    print(f"Transcription saved\ntitle: {file_path}\n")
+    logger.info(f"Transcription saved\ntitle: {target_file}\n")
 
 
 async def process_links(directory: str, links: list) -> None:
@@ -83,7 +122,6 @@ async def process_links(directory: str, links: list) -> None:
 
     print("запускаю загрузку субтритров")
     results = await asyncio.gather(*tasks, return_exceptions=True)
-
 
     tasks_to_download = []
     loader = Yt_loader(directory)
@@ -110,14 +148,16 @@ async def process_links(directory: str, links: list) -> None:
 
 
 def main():
-    directory = make_save_dir()
+    directory: Path = make_save_dir()
 
     chooser = input("Please choose the mode: 1 - file, 2 - youtube\n")
     if chooser == '1':
-        path_to_file = input("please input path:\n")
-        transcriber = WhisperTranscriber("small")
-        transcriber_saver(transcriber,directory, path_to_file)
-        
+        logger.info("File mode chosen")
+        source_filename = input("please input path:\n")
+        logger.info(f"Source file name is: {source_filename}")
+        transcriber = WhisperTranscriber(WHISPER_MODEL)
+        transcriber_saver(transcriber, directory, source_filename)
+
     elif chooser == '2':
         links = collect_links()
         if not links:
