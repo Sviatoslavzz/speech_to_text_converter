@@ -6,6 +6,7 @@ from captions import get_caption_by_link
 from youtube_api import get_channel_videos, get_channel_id_by_name
 from transcribers.abscract import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
+from transcribers.whisper_transcriber import WhisperTranscriber
 from objects import DownloadOptions
 from yt_dlp_loader import Yt_loader
 
@@ -61,7 +62,9 @@ def menu():
 
 def transcriber_saver(transcriber: AbstractTranscriber, save_dir: str, file_path: str) -> None:
     result = transcriber.transcribe(path=f'{save_dir}/{file_path}')
+    # TODO validate file format
     file_path = file_path.replace('.mp3', '.txt')
+    file_path = file_path.replace('.mp4', '.txt')
     with open(f'{save_dir}/{file_path}', "w") as file:
         file.write(result)
     print(f"Transcription saved\ntitle: {file_path}\n")
@@ -108,25 +111,31 @@ async def process_links(directory: str, links: list) -> None:
 
 def main():
     directory = make_save_dir()
-    links = collect_links()
 
-    if not links:
-        print(">> You did not enter any link! <<")
-        return
-
-    menu_opt = menu()
-    if menu_opt == DownloadOptions.TEXT:
-        print("запускаю асинхронное выполнение process_links")
-        asyncio.run(process_links(directory, links))
-    elif menu_opt == DownloadOptions.VIDEO:
-        quality = input("Enter a quality e.g. 720p: ")
-        loader = Yt_loader(directory)
-        for link in links:
-            loader.download_video(link, quality=quality)
-    elif menu_opt == DownloadOptions.AUDIO:
-        loader = Yt_loader(directory)
-        for link in links:
-            print(loader.download_audio(link)[0])
+    chooser = input("Please choose the mode: 1 - file, 2 - youtube\n")
+    if chooser == '1':
+        path_to_file = input("please input path:\n")
+        transcriber = WhisperTranscriber("small")
+        transcriber_saver(transcriber,directory, path_to_file)
+        
+    elif chooser == '2':
+        links = collect_links()
+        if not links:
+            print(">> You did not enter any link! <<")
+            return
+        menu_opt = menu()
+        if menu_opt == DownloadOptions.TEXT:
+            print("запускаю асинхронное выполнение process_links")
+            asyncio.run(process_links(directory, links))
+        elif menu_opt == DownloadOptions.VIDEO:
+            quality = input("Enter a quality e.g. 720p: ")
+            loader = Yt_loader(directory)
+            for link in links:
+                loader.download_video(link, quality=quality)
+        elif menu_opt == DownloadOptions.AUDIO:
+            loader = Yt_loader(directory)
+            for link in links:
+                print(loader.download_audio(link)[0])
 
 
 if __name__ == "__main__":
