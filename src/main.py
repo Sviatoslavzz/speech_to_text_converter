@@ -1,11 +1,12 @@
-# from pytube_loader import Loader
 import warnings
 import os
 import asyncio
 
 from captions import get_caption_by_link
 from youtube_api import get_channel_videos, get_channel_id_by_name
-from transcriber import Transcriber
+from transcribers.abscract import AbstractTranscriber
+from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
+from transcribers.whisper_transcriber import WhisperTranscriber
 from objects import DownloadOptions
 from yt_dlp_loader import Yt_loader
 
@@ -59,38 +60,82 @@ def menu():
             print("Sorry, you entered a wrong option")
 
 
+def transcriber_saver(transcriber: AbstractTranscriber, save_dir: str, file_path: str) -> None:
+    result = transcriber.transcribe(path=f'{save_dir}/{file_path}')
+    # TODO validate file format
+    file_path = file_path.replace('.mp3', '.txt')
+    file_path = file_path.replace('.mp4', '.txt')
+    with open(f'{save_dir}/{file_path}', "w") as file:
+        file.write(result)
+    print(f"Transcription saved\ntitle: {file_path}\n")
+
+
 async def process_links(directory: str, links: list) -> None:
+    """
+    Tries to get captions by YT video link, in case of fail tries to transcribe loaded audio file to text
+    :param directory: directory to save the transcribed videos
+    :param links: list of links
+    :return: None
+    """
     tasks = []
-    transcriber = Transcriber()
     for link in links:
         tasks.append(get_caption_by_link(directory, link))
 
+    print("запускаю загрузку субтритров")
     results = await asyncio.gather(*tasks, return_exceptions=True)
+
+
+    tasks_to_download = []
+    loader = Yt_loader(directory)
     for link, result in zip(links, results):
         if not result:
-            await asyncio.get_event_loop().run_in_executor(None, transcriber.transcribe_audio, directory, link)
+            print("создаю список путей к аудио")
+            tasks_to_download.append(loader.async_download_audio(link))
+    results_to_download = await asyncio.gather(*tasks_to_download, return_exceptions=True)
+
+    print(results_to_download)
+
+    transcriber = None
+    for path, success in results_to_download:
+        if success:
+            if not transcriber:
+                print("инициализирую transcriber")
+                transcriber = FasterWhisperTranscriber(model="small", device="cpu")
+            print(f"запускаю transcriber в новом потоке к файлу {directory}/{path}")
+            await asyncio.get_running_loop().run_in_executor(None,
+                                                             transcriber_saver,
+                                                             transcriber,
+                                                             directory,
+                                                             path)
 
 
 def main():
     directory = make_save_dir()
-    links = collect_links()
 
-    if not links:
-        print(">> You did not enter any link! <<")
-        return
-
-    menu_opt = menu()
-    if menu_opt == DownloadOptions.TEXT:
-        asyncio.run(process_links(directory, links))
-    elif menu_opt == DownloadOptions.VIDEO:
-        quality = input("Enter a quality e.g. 720p: ")
-        loader = Yt_loader(directory)
-        for link in links:
-            loader.download_video(link, quality=quality)
-    elif menu_opt == DownloadOptions.AUDIO:
-        loader = Yt_loader(directory)
-        for link in links:
-            loader.download_audio(link)
+    chooser = input("Please choose the mode: 1 - file, 2 - youtube\n")
+    if chooser == '1':
+        path_to_file = input("please input path:\n")
+        transcriber = WhisperTranscriber("small")
+        transcriber_saver(transcriber,directory, path_to_file)
+        
+    elif chooser == '2':
+        links = collect_links()
+        if not links:
+            print(">> You did not enter any link! <<")
+            return
+        menu_opt = menu()
+        if menu_opt == DownloadOptions.TEXT:
+            print("запускаю асинхронное выполнение process_links")
+            asyncio.run(process_links(directory, links))
+        elif menu_opt == DownloadOptions.VIDEO:
+            quality = input("Enter a quality e.g. 720p: ")
+            loader = Yt_loader(directory)
+            for link in links:
+                loader.download_video(link, quality=quality)
+        elif menu_opt == DownloadOptions.AUDIO:
+            loader = Yt_loader(directory)
+            for link in links:
+                print(loader.download_audio(link)[0])
 
 
 if __name__ == "__main__":

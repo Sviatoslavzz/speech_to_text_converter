@@ -1,3 +1,6 @@
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
 import yt_dlp
 from os import remove
 
@@ -68,8 +71,9 @@ class Yt_loader:
             try:
                 with yt_dlp.YoutubeDL(self._audio_config) as ydl:
                     ydl.download([link_])
-                    self._title = self._title + ".mp3"
-                    return f'{self._title}', True
+                    self._title = self._title.replace('.webm', '')
+                    # self._title = self._title + ".mp3"  # TODO title validation required
+                    return f'{self._title}.mp3', True
             except yt_dlp.utils.DownloadError:
                 print(f'An error occurred while downloading audio for: "{link_}"')
                 self._title = self._title + ".webm"
@@ -77,6 +81,11 @@ class Yt_loader:
         else:
             print(f'provided link is not valid: "{link_}"')
             return "", False
+
+    async def async_download_audio(self, link_) -> (str, bool):
+        loop = asyncio.get_running_loop()
+        with ThreadPoolExecutor(max_workers=20) as pool:
+            return await loop.run_in_executor(pool, self.download_audio, link_)
 
     def download_video(self, link_: str, quality: str = "720p") -> (str, bool):
         # TODO как будто бы не видит дефолтные 720p

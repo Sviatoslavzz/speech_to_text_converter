@@ -3,11 +3,11 @@ name = "speech_to_text_converter"
 version = "1.0.0"
 description = "rpoject aims to convert speech, received from youtube link to text and save it to the file"
 readme = "README.md"
-authors = [{name = "Sviatoslav Zaikin"}]
+authors = [{ name = "Sviatoslav Zaikin" }]
 
 dependencies = [
     "openai_whisper==20231117",
-#    "six>=1.16.0",
+    "faster-whisper>=1.0.3",
     "numpy<2",
     "yt_dlp>=2024.7.9",
     "youtube-transcript-api>=0.6.2",
