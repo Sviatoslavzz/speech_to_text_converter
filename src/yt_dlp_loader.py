@@ -1,11 +1,13 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from loguru import logger
 
 import yt_dlp
 from os import remove
 
 
-class Yt_loader:
+class YtLoader:
     _audio_config = {
         'format': 'bestaudio/best',  # the best audio quality available
         'postprocessors': [{
@@ -22,9 +24,10 @@ class Yt_loader:
         'quiet': True,
     }
 
-    def __init__(self, directory: str):
+    def __init__(self, directory: Path):
         self.dir = directory
         self._title = "example"
+        logger.info(f"Yt_loader init")
 
     def __del__(self):
         if self._title.endswith(".webm"):

@@ -1,6 +1,6 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 
-from yt_dlp_loader import Yt_loader
+from yt_dlp_loader import YtLoader
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
@@ -16,7 +16,7 @@ async def get_caption_by_link(directory: str, link: str) -> bool:
 
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor(max_workers=20) as executor:
-        title, valid = await loop.run_in_executor(executor, Yt_loader.get_title, link)
+        title, valid = await loop.run_in_executor(executor, YtLoader.get_title, link)
         if not valid:
             print(f"Unable to get video title for {link}")
 

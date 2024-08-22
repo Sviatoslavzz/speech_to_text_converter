@@ -1,10 +1,7 @@
 import warnings
-import os
 import asyncio
 from loguru import logger
 from pathlib import Path
-
-from numpy.ma.core import absolute
 
 from captions import get_caption_by_link
 from youtube_api import get_channel_videos, get_channel_id_by_name
@@ -12,7 +9,7 @@ from transcribers.abscract import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 from transcribers.whisper_transcriber import WhisperTranscriber
 from objects import DownloadOptions
-from yt_dlp_loader import Yt_loader
+from yt_dlp_loader import YtLoader
 
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
 
@@ -38,7 +35,7 @@ FASTER_WHISPER__FORMATS = [
     "ogg",
     "opus"
 ]
-
+TRANSCRIBER = FasterWhisperTranscriber
 
 def make_save_dir() -> Path:
     absolute_path = Path(__file__).absolute().parent.parent
@@ -90,23 +87,35 @@ def menu():
             print("Sorry, you entered a wrong option")
 
 
-def transcriber_saver(transcriber: AbstractTranscriber, save_dir: Path, file_path: str) -> None:
-    file_name = Path(f"{save_dir}/{file_path}")
-    if not file_name.is_file():
-        logger.error(f"File does not exist: {file_name}")
-        raise FileNotFoundError(f"{file_name} not found")
-
-    file_suf = file_name.suffix
-    if file_suf.lstrip('.') not in WHISPER__FORMATS:
+def transcriber_saver(transcriber: AbstractTranscriber, save_dir: Path, file_name: str) -> None:
+    """
+    Checks the save_dir and file_name, launches transcription process, saves the result in .txt
+    :param transcriber: current class
+    :param save_dir: saving directory
+    :param file_name: source file
+    :return: None
+    """
+    source_path = save_dir / file_name
+    if not source_path.is_file():
+        logger.error(f"File does not exist: {source_path}")
+        raise FileNotFoundError(f"{source_path} not found")
+    file_suf = source_path.suffix
+    if isinstance(transcriber, WhisperTranscriber) and file_suf.lstrip('.') not in WHISPER__FORMATS:
         logger.error(f"File format is not supported: {file_suf}")
         raise NotImplementedError
+    if isinstance(transcriber, FasterWhisperTranscriber) and file_suf.lstrip('.') not in FASTER_WHISPER__FORMATS:
+        logger.error(f"File format is not supported: {file_suf}")
+        raise NotImplementedError
+    result = transcriber.transcribe(path=source_path.__fspath__())
+    target_file = source_path.with_suffix(".txt")
 
-    result = transcriber.transcribe(path=file_name.__fspath__())
-
-    target_file = file_name.__fspath__().replace(file_suf, '.txt')
-    with open(target_file, "w") as file:
-        file.write(result)
-    logger.info(f"Transcription saved\ntitle: {target_file}\n")
+    try:
+        with open(target_file, "w") as file:
+            file.write(result)
+        logger.info(f"Transcription saved\ntitle: {target_file}\n")
+    except OSError:
+        logger.error(f"Unable to save transcription to {target_file}")
+        raise OSError
 
 
 async def process_links(directory: str, links: list) -> None:
@@ -124,7 +133,7 @@ async def process_links(directory: str, links: list) -> None:
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     tasks_to_download = []
-    loader = Yt_loader(directory)
+    loader = YtLoader(directory)
     for link, result in zip(links, results):
         if not result:
             print("создаю список путей к аудио")
@@ -155,9 +164,8 @@ def main():
         logger.info("File mode chosen")
         source_filename = input("please input path:\n")
         logger.info(f"Source file name is: {source_filename}")
-        transcriber = WhisperTranscriber(WHISPER_MODEL)
+        transcriber = TRANSCRIBER(WHISPER_MODEL)
         transcriber_saver(transcriber, directory, source_filename)
-
     elif chooser == '2':
         links = collect_links()
         if not links:
@@ -169,11 +177,11 @@ def main():
             asyncio.run(process_links(directory, links))
         elif menu_opt == DownloadOptions.VIDEO:
             quality = input("Enter a quality e.g. 720p: ")
-            loader = Yt_loader(directory)
+            loader = YtLoader(directory)
             for link in links:
                 loader.download_video(link, quality=quality)
         elif menu_opt == DownloadOptions.AUDIO:
-            loader = Yt_loader(directory)
+            loader = YtLoader(directory)
             for link in links:
                 print(loader.download_audio(link)[0])
 
