@@ -1,15 +1,17 @@
 import warnings
-from loguru import logger
 
 import whisper
+from loguru import logger
+
 from transcribers.abscract import AbstractTranscriber
 
-warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
+warnings.filterwarnings(
+    "ignore", message="FP16 is not supported on CPU; using FP32 instead"
+)
 
 
 class WhisperTranscriber(AbstractTranscriber):
-
-    def __init__(self, model):
+    def __init__(self, model: str):
         if not self.validate_model(model):
             logger.error(f"Model {model} is not valid")
             raise ValueError(f"Model {model} is not valid")
@@ -22,7 +24,7 @@ class WhisperTranscriber(AbstractTranscriber):
         logger.info("WhisperTranscriber transcription started")
         result = model.transcribe(path)
 
-        return result['text']
+        return result["text"]
 
     # def _save_to_file(self, path: str, transcription: str) -> None:
     #     if path.endswith((".mp3", ".mp4")):

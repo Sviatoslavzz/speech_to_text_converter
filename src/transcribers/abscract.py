@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 
-class AbstractTranscriber(ABC):
 
+class AbstractTranscriber(ABC):
     @staticmethod
-    def validate_model(model) -> bool:
-        if model not in [
+    def validate_model(model: str) -> bool:
+        return model in [
             "tiny",
             "tiny.en",
             "base",
@@ -21,10 +21,7 @@ class AbstractTranscriber(ABC):
             "large",
             "distil-large-v2",
             "distil-large-v3",
-        ]:
-            return False
-        return True
-
+        ]
 
     @abstractmethod
     def transcribe(self, path: str) -> str:

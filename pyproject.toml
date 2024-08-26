@@ -15,14 +15,66 @@ dependencies = [
     "google-api-python-client>=2.140.0",
     "loguru>=0.7.2"
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 
 [project.optional-dependencies]
-dev = []
+dev = [
+    "ruff>=0.6.2"
+]
 
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+exclude = [
+    ".git",
+    "__pycache__",
+    "*.eggs",
+    "build",
+    "dist",
+    "venv",
+    "saved_files"
+]
+ignore = [
+    "ANN101", # Missing type annotation for `self` in method
+    "ANN102", # Missing type annotation for `cls` in classmethod
+    "ANN204", # Missing return type annotation for special method `__del__`
+    "T201", # `print` found
+]
+
+[tool.ruff.lint]
+extend-select = [
+    "A", # flake8-builtins
+    "ANN", # flake8-annotations
+    "B", # flake8-bugbear
+    "C4", # comprehensions
+    "E", "W", # pycodestyle
+    "F", # Pyflakes
+    "I", # isort
+    "ICN",
+    "INP",
+    "ISC",
+    "N", # pep8-naming
+    "NPY",
+    "PERF",
+    "PIE", # flake8-pie
+    "PL",
+    "PT",
+    "Q",
+    "RET",
+    "RUF",
+    "S", # flake8-bandit
+    "SIM", # simplify
+    "T10",
+    "T20", # flake8-print
+    "PTH",
+    "UP",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=72", "wheel"]
 build-backend = "setuptools.build_meta"
 
 

@@ -1,8 +1,9 @@
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
 from youtube_transcript_api import YouTubeTranscriptApi
 
 from yt_dlp_loader import YtLoader
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 
 
 async def get_caption_by_link(directory: str, link: str) -> bool:
@@ -22,14 +23,15 @@ async def get_caption_by_link(directory: str, link: str) -> bool:
 
             return False
         try:
-            transcript = await loop.run_in_executor(executor, YouTubeTranscriptApi.get_transcript, video_id,
-                                                    ['ru', 'en'])
-            with open(f'{directory}/{title}.txt', "w") as file:
+            transcript = await loop.run_in_executor(
+                executor, YouTubeTranscriptApi.get_transcript, video_id, ["ru", "en"]
+            )
+            with open(f"{directory}/{title}.txt", "w") as file: #TODO PATH OPEN
                 for entry in transcript:
-                    file.write(entry['text'].replace('\n', ' ') + ' ')
+                    file.write(entry["text"].replace("\n", " ") + " ")
 
             return True
         except Exception as e:
-            print(f"An error occurred: {str(e)}")
+            print(f"An error occurred: {e!s}")
 
             return False

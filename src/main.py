@@ -1,41 +1,28 @@
-import warnings
 import asyncio
-from loguru import logger
+import warnings
 from pathlib import Path
 
+from loguru import logger
+
 from captions import get_caption_by_link
-from youtube_api import get_channel_videos, get_channel_id_by_name
+from objects import DownloadOptions
 from transcribers.abscract import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 from transcribers.whisper_transcriber import WhisperTranscriber
-from objects import DownloadOptions
+from youtube_api import get_channel_id_by_name, get_channel_videos
 from yt_dlp_loader import YtLoader
 
-warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
+warnings.filterwarnings(
+    "ignore", message="FP16 is not supported on CPU; using FP32 instead"
+)
 
+# TODO добавление через config
 WHISPER_MODEL = "small"
 SAVING_FOLDER = "saved_files"
-WHISPER__FORMATS = [
-    "mp3",
-    "mp4",
-    "mpeg",
-    "mpga",
-    "m4a",
-    "wav",
-    "webm",
-    "mov"
-]
-FASTER_WHISPER__FORMATS = [
-    "mp3",
-    "mp4",
-    "m4a",
-    "wav",
-    "webm",
-    "mov",
-    "ogg",
-    "opus"
-]
+WHISPER__FORMATS = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm", "mov"]
+FASTER_WHISPER__FORMATS = ["mp3", "mp4", "m4a", "wav", "webm", "mov", "ogg", "opus"]
 TRANSCRIBER = FasterWhisperTranscriber
+
 
 def make_save_dir() -> Path:
     absolute_path = Path(__file__).absolute().parent.parent
@@ -51,10 +38,13 @@ def collect_links() -> list:
     links = []
     channel_link = input(
         """You can enter a channel link to collect all videos from a channel, """
-        """or press enter to proceed with simple links:\n""")
+        """or press enter to proceed with simple links:\n"""
+    )
     if "youtube.com" in channel_link:
         try:
-            amount, links = get_channel_videos(get_channel_id_by_name(channel_link.strip()))
+            amount, links = get_channel_videos(
+                get_channel_id_by_name(channel_link.strip())
+            )
             print(f"Собрано {amount} ссылок на видео")
         except ValueError as e:
             print(f"Ups: {e}")
@@ -68,10 +58,11 @@ def collect_links() -> list:
     return links
 
 
-def menu():
-    option = -1
-    while option != '4' and option != "exit":
-        print("Please choose options to continue\n1. Download text\n2. Download audio\n3. Download video\n4. Exit")
+def menu() -> str:
+    while True:
+        print(
+            "Please choose options to continue\n1. Download text\n2. Download audio\n3. Download video\n4. Exit"
+        )
         option = input()
 
         if not option.isdigit():
@@ -83,11 +74,15 @@ def menu():
             return DownloadOptions.AUDIO
         elif int(option) == DownloadOptions.VIDEO.value:
             return DownloadOptions.VIDEO
-        elif option != '4' and option != "exit":
+        elif option == "4":
+            return ""
+        else:
             print("Sorry, you entered a wrong option")
 
 
-def transcriber_saver(transcriber: AbstractTranscriber, save_dir: Path, file_name: str) -> None:
+def transcriber_saver(
+        transcriber: AbstractTranscriber, save_dir: Path, file_name: str
+) -> None:
     """
     Checks the save_dir and file_name, launches transcription process, saves the result in .txt
     :param transcriber: current class
@@ -100,22 +95,28 @@ def transcriber_saver(transcriber: AbstractTranscriber, save_dir: Path, file_nam
         logger.error(f"File does not exist: {source_path}")
         raise FileNotFoundError(f"{source_path} not found")
     file_suf = source_path.suffix
-    if isinstance(transcriber, WhisperTranscriber) and file_suf.lstrip('.') not in WHISPER__FORMATS:
+    if (
+            isinstance(transcriber, WhisperTranscriber)
+            and file_suf.lstrip(".") not in WHISPER__FORMATS
+    ):
         logger.error(f"File format is not supported: {file_suf}")
         raise NotImplementedError
-    if isinstance(transcriber, FasterWhisperTranscriber) and file_suf.lstrip('.') not in FASTER_WHISPER__FORMATS:
+    if (
+            isinstance(transcriber, FasterWhisperTranscriber)
+            and file_suf.lstrip(".") not in FASTER_WHISPER__FORMATS
+    ):
         logger.error(f"File format is not supported: {file_suf}")
         raise NotImplementedError
     result = transcriber.transcribe(path=source_path.__fspath__())
     target_file = source_path.with_suffix(".txt")
 
     try:
-        with open(target_file, "w") as file:
+        with target_file.open(mode="w") as file:
             file.write(result)
         logger.info(f"Transcription saved\ntitle: {target_file}\n")
-    except OSError:
+    except OSError as err:
         logger.error(f"Unable to save transcription to {target_file}")
-        raise OSError
+        raise OSError("Failed to save transcription") from err
 
 
 async def process_links(directory: str, links: list) -> None:
@@ -125,20 +126,20 @@ async def process_links(directory: str, links: list) -> None:
     :param links: list of links
     :return: None
     """
-    tasks = []
-    for link in links:
-        tasks.append(get_caption_by_link(directory, link))
-
+    tasks = [get_caption_by_link(directory, link) for link in links]
     print("запускаю загрузку субтритров")
+
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     tasks_to_download = []
     loader = YtLoader(directory)
-    for link, result in zip(links, results):
+    for link, result in zip(links, results, strict=False):
         if not result:
             print("создаю список путей к аудио")
             tasks_to_download.append(loader.async_download_audio(link))
-    results_to_download = await asyncio.gather(*tasks_to_download, return_exceptions=True)
+    results_to_download = await asyncio.gather(
+        *tasks_to_download, return_exceptions=True
+    )
 
     print(results_to_download)
 
@@ -149,24 +150,22 @@ async def process_links(directory: str, links: list) -> None:
                 print("инициализирую transcriber")
                 transcriber = FasterWhisperTranscriber(model="small", device="cpu")
             print(f"запускаю transcriber в новом потоке к файлу {directory}/{path}")
-            await asyncio.get_running_loop().run_in_executor(None,
-                                                             transcriber_saver,
-                                                             transcriber,
-                                                             directory,
-                                                             path)
+            await asyncio.get_running_loop().run_in_executor(
+                None, transcriber_saver, transcriber, directory, path
+            )
 
 
-def main():
+def main() -> None:
     directory: Path = make_save_dir()
 
     chooser = input("Please choose the mode: 1 - file, 2 - youtube\n")
-    if chooser == '1':
+    if chooser == "1":
         logger.info("File mode chosen")
         source_filename = input("please input path:\n")
         logger.info(f"Source file name is: {source_filename}")
         transcriber = TRANSCRIBER(WHISPER_MODEL)
         transcriber_saver(transcriber, directory, source_filename)
-    elif chooser == '2':
+    elif chooser == "2":
         links = collect_links()
         if not links:
             print(">> You did not enter any link! <<")
