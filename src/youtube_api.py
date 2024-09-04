@@ -1,4 +1,3 @@
-
 from googleapiclient.discovery import build
 
 YT_API = "AIzaSyCwScs_FL7ojj7se73PFfdcdhhapQ1Ma0E"
@@ -14,9 +13,7 @@ def get_channel_id_by_name(link: str) -> str:
     channel_name = [i for i in link.split("/") if i.startswith("@")]
 
     # Search for the channel by name
-    request = youtube.search().list(
-        part="snippet", q=channel_name, type="channel", maxResults=1
-    )
+    request = youtube.search().list(part="snippet", q=channel_name, type="channel", maxResults=1)
     response = request.execute()
 
     if not response["items"]:
@@ -24,7 +21,7 @@ def get_channel_id_by_name(link: str) -> str:
 
     # Get the channel ID
     channel_id = response["items"][0]["snippet"]["channelId"]
-    return channel_id
+    return channel_id  # noqa RET504
 
 
 def get_channel_videos(channel_id: str) -> tuple[int, list[str]]:
@@ -38,9 +35,7 @@ def get_channel_videos(channel_id: str) -> tuple[int, list[str]]:
         # Fetch the playlist ID for the channel's uploads
         request = youtube.channels().list(part="contentDetails", id=channel_id)
         response = request.execute()
-        playlist_id = response["items"][0]["contentDetails"]["relatedPlaylists"][
-            "uploads"
-        ]
+        playlist_id = response["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
 
         # Fetch the videos from the uploads playlist
         request = youtube.playlistItems().list(

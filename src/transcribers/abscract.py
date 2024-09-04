@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 
 class AbstractTranscriber(ABC):
@@ -24,7 +25,7 @@ class AbstractTranscriber(ABC):
         ]
 
     @abstractmethod
-    def transcribe(self, path: str) -> str:
+    def transcribe(self, path: Path) -> str:
         pass
 
     # @abstractmethod

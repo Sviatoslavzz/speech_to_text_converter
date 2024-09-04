@@ -5,3 +5,4 @@ class DownloadOptions(Enum):
     TEXT = 1
     AUDIO = 2
     VIDEO = 3
+    EXIT = 4

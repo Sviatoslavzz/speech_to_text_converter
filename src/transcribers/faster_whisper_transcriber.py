@@ -1,4 +1,5 @@
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 from faster_whisper import WhisperModel
 from loguru import logger
@@ -7,6 +8,8 @@ from transcribers.abscract import AbstractTranscriber
 
 
 class FasterWhisperTranscriber(AbstractTranscriber):
+    FASTER_WHISPER_FORMATS = ["mp3", "mp4", "m4a", "wav", "webm", "mov", "ogg", "opus"]
+
     @dataclass
     class Config:
         model_size_or_path: str
@@ -24,19 +27,18 @@ class FasterWhisperTranscriber(AbstractTranscriber):
             logger.error(f"Model {model} is not valid")
             raise ValueError(f"Model {model} is not valid")
         self.config = self.Config(model_size_or_path=model, device=device)
-        logger.info(
-            f"FasterWhisperTranscriber init with a model {self.config.model_size_or_path}"
-        )
+        logger.info(f"FasterWhisperTranscriber init with a model {self.config.model_size_or_path}")
 
-    def transcribe(self, path: str) -> str:
+    def transcribe(self, path: Path) -> str:
+        if path.suffix.lstrip(".") not in self.FASTER_WHISPER_FORMATS:
+            logger.error(f"File format is not supported: {path.suffix}")
+            raise NotImplementedError
         model = WhisperModel(**asdict(self.config))
         logger.info("FasterWhisperTranscriber transcription started")
-        segments, info = model.transcribe(path)
-        logger.info(
-            f"Detected language {info.language} with probability {info.language_probability}"
-        )
+        segments, info = model.transcribe(path.__fspath__())
+        logger.info(f"Detected language {info.language} with probability {info.language_probability}")
         result = ""
         for segment in segments:
-            result += segment.text
+            result += segment.text  # TODO а что если сразу в файл писать а не в оперативу?
 
         return result
