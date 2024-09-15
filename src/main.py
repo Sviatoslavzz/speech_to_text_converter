@@ -92,20 +92,20 @@ def transcriber_saver(transcriber: AbstractTranscriber, save_dir: Path, file_nam
         raise OSError("Failed to save transcription") from err
 
 
-async def process_links(directory: Path, links: list[str]) -> None:
+async def process_links(save_dir: Path, links: list[str]) -> None:
     """
     Tries to get captions by YT video link, in case of fail tries to transcribe loaded audio file to text
-    :param directory: directory to save the transcribed videos
+    :param save_dir: directory to save the transcribed videos
     :param links: list of links
     :return: None
     """
-    tasks = [get_caption_by_link(directory, link) for link in links]
+    tasks = [get_caption_by_link(save_dir, link) for link in links]
     logger.info("Subtitles loading process is started")
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     tasks_to_download = []
-    loader = YtLoader(directory)
+    loader = YtLoader(save_dir)
     for link, result in zip(links, results, strict=False):
         if not result:
             logger.info("Found new link to download, adding...")
@@ -113,13 +113,13 @@ async def process_links(directory: Path, links: list[str]) -> None:
     results_to_download = await asyncio.gather(*tasks_to_download, return_exceptions=True)
 
     transcriber = None
-    for path, success in results_to_download:
+    for file_path, success in results_to_download:
         if success:
             if not transcriber:
                 transcriber = TRANSCRIBER(model=WHISPER_MODEL)
                 logger.info(f"Transcriber {transcriber.__class__.__name__} initialized")
             logger.info("Create new thread for transcription")
-            await asyncio.get_running_loop().run_in_executor(None, transcriber_saver, transcriber, directory, path)
+            await asyncio.get_running_loop().run_in_executor(None, transcriber_saver, transcriber, save_dir, file_path)
 
 
 def main() -> None:
@@ -139,7 +139,7 @@ def main() -> None:
             return
         menu_opt = menu()
         if menu_opt == DownloadOptions.TEXT:
-            print("запускаю асинхронное выполнение process_links")
+            logger.info("запускаю асинхронное выполнение process_links")
             asyncio.run(process_links(directory, links))
         elif menu_opt == DownloadOptions.VIDEO:
             quality = input("Enter a quality e.g. 720p: ")

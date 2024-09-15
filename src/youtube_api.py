@@ -1,58 +1,124 @@
-from googleapiclient.discovery import build
+from aiohttp import ClientSession
+from loguru import logger
 
-YT_API = "AIzaSyCwScs_FL7ojj7se73PFfdcdhhapQ1Ma0E"
-youtube = build("youtube", "v3", developerKey=YT_API)
-
-
-def get_channel_id_by_name(link: str) -> str:
-    """
-    Searches a YouTube channel by name and returns its ID.
-    :param link: YouTube channel link
-    :return: channel id
-    """
-    channel_name = [i for i in link.split("/") if i.startswith("@")]
-
-    # Search for the channel by name
-    request = youtube.search().list(part="snippet", q=channel_name, type="channel", maxResults=1)
-    response = request.execute()
-
-    if not response["items"]:
-        raise ValueError(f"No channel found for the name: {channel_name}")
-
-    # Get the channel ID
-    channel_id = response["items"][0]["snippet"]["channelId"]
-    return channel_id  # noqa RET504
+from objects import YouTubeVideo
 
 
-def get_channel_videos(channel_id: str) -> tuple[int, list[str]]:
-    videos = []
-    next_page_token = None
+class YouTubeClient:
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = "https://www.googleapis.com/youtube/v3"
 
-    print("Collecting video links process started...")
+    async def get_channel_id_by_link(self, link: str) -> str | None:
+        """
+        Searches for the YouTube channel by name and returns its ID.
+        :param link: YouTube channel link
+        :return: channel id or None
+        """
+        channel_id = None
 
-    amount = 0
-    while True:
-        # Fetch the playlist ID for the channel's uploads
-        request = youtube.channels().list(part="contentDetails", id=channel_id)
-        response = request.execute()
-        playlist_id = response["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
+        async with ClientSession() as session:
+            if "channel/" in link:
+                channel_id = link.split("channel/")[1]
+                url = self.base_url + "/channels"
+                params = {
+                    "part": "id",
+                    "id": channel_id,
+                    "key": self.api_key,
+                }
+                try:
+                    async with session.get(url, params=params) as response:
+                        response_json = await response.json()
+                        if not (response_json.get("items") and response_json["items"][0]["kind"] == "youtube#channel"):
+                            logger.warning(f"Unable to get channel id from link {link}")
+                            channel_id = None
+                        else:
+                            logger.info(f"Found a channel id: {channel_id}")
+                except Exception as error:
+                    logger.error(f"Error during http connection try: {error}")
+            elif "@" in link:
+                channel_name = link.split("@")[1]
+                url = self.base_url + "/search"
+                params = {
+                    "part": "id",
+                    "q": channel_name,
+                    "type": "channel",
+                    "maxResults": 1,
+                    "key": self.api_key,
+                }
+                try:
+                    async with session.get(url, params=params) as response:
+                        response_json = await response.json()
+                        if response_json.get("items") and response_json["items"][0]["id"]["kind"] == "youtube#channel":
+                            channel_id = response_json["items"][0]["id"]["channelId"]
+                            logger.info(f"Found a channel id: {channel_id}")
+                        else:
+                            logger.warning(f"Unable to get channel id from link {link}")
+                except Exception as error:
+                    logger.error(f"Error during http connection try: {error}")
+            else:
+                logger.warning(f"Unable to get channel id from link {link}")
 
-        # Fetch the videos from the uploads playlist
-        request = youtube.playlistItems().list(
-            part="snippet",
-            playlistId=playlist_id,
-            maxResults=50,
-            pageToken=next_page_token,
-        )
-        response = request.execute()
+        return channel_id
 
-        for item in response["items"]:
-            video_id = item["snippet"]["resourceId"]["videoId"]
-            amount += 1
-            videos.append(f"https://www.youtube.com/watch?v={video_id}")
+    async def get_channel_videos(self, channel_id: str) -> tuple[int, list[YouTubeVideo] | None]:
+        videos = []
+        amount = 0
+        logger.info("Collecting video links process started...")
 
-        next_page_token = response.get("nextPageToken")
-        if next_page_token is None:
-            break
+        async with ClientSession() as session:
+            url = self.base_url + "/channels"
+            params = {
+                "part": "contentDetails",
+                "id": channel_id,
+                "key": self.api_key,
+            }
+            try:
+                async with session.get(url, params=params) as response:
+                    response_json = await response.json()
+                    if response_json.get("items") and response_json["items"][0]["contentDetails"]:
+                        playlist_id = response_json["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
+                        logger.info(f"Got the playlist id: {playlist_id}")
+                    else:
+                        logger.warning(f"Unable to get the playlist id for channel id: {channel_id}")
+                        return amount, None
+            except Exception as error:
+                logger.error(f"Error during http connection try: {error}")
+                return amount, None
 
-    return amount, videos
+            url = self.base_url + "/playlistItems"
+            params = {
+                "part": "snippet",
+                "playlistId": playlist_id,
+                "maxResults": 50,
+                "key": self.api_key,
+            }
+            while True:
+                try:
+                    async with session.get(url, params=params) as response:
+                        response_json = await response.json()
+                        logger.info(
+                            f"Processing videos from {amount}.. to total: {response_json['pageInfo']['totalResults']}")
+                        if response_json["items"] and response_json["items"][0]["snippet"]:
+                            for item in response_json["items"]:
+                                video = YouTubeVideo(
+                                    id=item["snippet"]["resourceId"]["videoId"],
+                                    kind=item["snippet"]["resourceId"]["kind"],
+                                    published_at=item["snippet"]["publishedAt"],
+                                    owner_username=item["snippet"]["channelTitle"],
+                                    channel_id=channel_id,
+                                    title=item["snippet"]["title"],
+                                    link=None,
+                                )
+                                amount += 1
+                                videos.append(video)
+                        else:
+                            logger.error(f"Unable to get video #{amount} info for playlist_id: {playlist_id}")
+                except Exception as error:
+                    logger.error(f"Error during http connection try: {error}")
+                next_page_token = response_json.get("nextPageToken")
+                params["pageToken"] = next_page_token
+                if not next_page_token:
+                    break
+
+        return amount, videos

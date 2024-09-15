@@ -1,3 +1,5 @@
+include .env
+export
 
 .PHONY: uninstall_all_dependencies
 
@@ -5,7 +7,7 @@ run:
 	python3 src/main.py
 
 install:
-	pip install -e . -U
+	pip install -e .[dev,test] -U
 
 uninstall_all_dependencies:
 	pip freeze | grep -v '^-e' | xargs pip uninstall -y

@@ -13,13 +13,19 @@ dependencies = [
     "youtube-transcript-api>=0.6.2",
     "google-api-core>=2.19.1",
     "google-api-python-client>=2.140.0",
-    "loguru>=0.7.2"
+    "loguru>=0.7.2",
+    "aiohttp",
 ]
 requires-python = ">=3.12"
 
 [project.optional-dependencies]
 dev = [
     "ruff>=0.6.2"
+]
+test = [
+    'pytest>=8.0.0,<9.0.0',
+    'pytest-asyncio<0.25.0',
+    "python-dotenv",
 ]
 
 [tool.ruff]
@@ -78,7 +84,21 @@ extend-select = [
 convention = "google"
 
 [build-system]
-requires = ["setuptools>=72", "wheel"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
-
+[tool.pytest.ini_options]
+addopts = '''
+-s
+-vv
+--tb=long
+--asyncio-mode=strict
+'''
+python_files = 'test_*.py'
+filterwarnings = 'ignore::DeprecationWarning'
+cache_dir = 'build/.pytest_cache_dir'
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "asyncio",
+]

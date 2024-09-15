@@ -8,7 +8,7 @@ from transcribers.abscract import AbstractTranscriber
 
 
 class FasterWhisperTranscriber(AbstractTranscriber):
-    FASTER_WHISPER_FORMATS = ["mp3", "mp4", "m4a", "wav", "webm", "mov", "ogg", "opus"]
+    FASTER_WHISPER_FORMATS = ["mp3", "mp4", "m4a", "wav", "webm", "mov", "ogg", "opus"]  # TODO take from config
 
     @dataclass
     class Config:
@@ -32,7 +32,7 @@ class FasterWhisperTranscriber(AbstractTranscriber):
     def transcribe(self, path: Path) -> str:
         if path.suffix.lstrip(".") not in self.FASTER_WHISPER_FORMATS:
             logger.error(f"File format is not supported: {path.suffix}")
-            raise NotImplementedError
+            raise NotImplementedError("File format is not supported")
         model = WhisperModel(**asdict(self.config))
         logger.info("FasterWhisperTranscriber transcription started")
         segments, info = model.transcribe(path.__fspath__())

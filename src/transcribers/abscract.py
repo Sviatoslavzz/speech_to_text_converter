@@ -27,7 +27,3 @@ class AbstractTranscriber(ABC):
     @abstractmethod
     def transcribe(self, path: Path) -> str:
         pass
-
-    # @abstractmethod
-    # def _save_to_file(self, path: str, transcription: str) -> None:
-    #     pass
