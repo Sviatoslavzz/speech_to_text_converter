@@ -13,6 +13,9 @@ uninstall_all_dependencies:
 	pip freeze | grep -v '^-e' | xargs pip uninstall -y
 	pip cache purge
 
+test:
+	pytest tests/
+
 lint:
 	ruff check .
 	ruff format . --check

@@ -1,3 +1,5 @@
+import re
+
 from aiohttp import ClientSession
 from loguru import logger
 
@@ -20,7 +22,7 @@ class YouTubeClient:
         async with ClientSession() as session:
             if "channel/" in link:
                 channel_id = link.split("channel/")[1]
-                url = self.base_url + "/channels"
+                url = f"{self.base_url}/channels"
                 params = {
                     "part": "id",
                     "id": channel_id,
@@ -38,7 +40,7 @@ class YouTubeClient:
                     logger.error(f"Error during http connection try: {error}")
             elif "@" in link:
                 channel_name = link.split("@")[1]
-                url = self.base_url + "/search"
+                url = f"{self.base_url}/search"
                 params = {
                     "part": "id",
                     "q": channel_name,
@@ -67,7 +69,7 @@ class YouTubeClient:
         logger.info("Collecting video links process started...")
 
         async with ClientSession() as session:
-            url = self.base_url + "/channels"
+            url = f"{self.base_url}/channels"
             params = {
                 "part": "contentDetails",
                 "id": channel_id,
@@ -86,7 +88,7 @@ class YouTubeClient:
                 logger.error(f"Error during http connection try: {error}")
                 return amount, None
 
-            url = self.base_url + "/playlistItems"
+            url = f"{self.base_url}/playlistItems"
             params = {
                 "part": "snippet",
                 "playlistId": playlist_id,
@@ -98,7 +100,8 @@ class YouTubeClient:
                     async with session.get(url, params=params) as response:
                         response_json = await response.json()
                         logger.info(
-                            f"Processing videos from {amount}.. to total: {response_json['pageInfo']['totalResults']}")
+                            f"Processing videos from {amount}.. to total: {response_json['pageInfo']['totalResults']}"
+                        )
                         if response_json["items"] and response_json["items"][0]["snippet"]:
                             for item in response_json["items"]:
                                 video = YouTubeVideo(
@@ -113,7 +116,7 @@ class YouTubeClient:
                                 amount += 1
                                 videos.append(video)
                         else:
-                            logger.error(f"Unable to get video #{amount} info for playlist_id: {playlist_id}")
+                            logger.warning(f"Unable to get video #{amount} info for playlist_id: {playlist_id}")
                 except Exception as error:
                     logger.error(f"Error during http connection try: {error}")
                 next_page_token = response_json.get("nextPageToken")
@@ -122,3 +125,49 @@ class YouTubeClient:
                     break
 
         return amount, videos
+
+    async def form_video_from_link(self, link: str) -> YouTubeVideo | None:
+        patterns = [r"v=([^&]+)", r"shorts/([^&]+)", r"live/([^&]+)"]
+        video_obj = None
+        for pattern in patterns:
+            match = re.search(pattern, link)
+            if match:
+                video_id = match.group(1)
+                video_obj = await self._form_object_from_video(video_id)
+                break
+
+        if not video_obj:
+            logger.warning(f"Unable to get video id from link {link}")
+
+        return video_obj
+
+    async def _form_object_from_video(self, video_id: str) -> YouTubeVideo | None:
+        video = None
+
+        async with ClientSession() as session:
+            url = f"{self.base_url}/videos"
+            params = {
+                "part": "snippet",
+                "id": video_id,
+                "key": self.api_key,
+            }
+            try:
+                async with session.get(url, params=params) as response:
+                    response_json = await response.json()
+                    if response_json.get("items") and response_json["items"][0]:
+                        video = YouTubeVideo(
+                            id=video_id,
+                            kind=response_json["items"][0]["kind"],
+                            published_at=response_json["items"][0]["snippet"]["publishedAt"],
+                            owner_username=response_json["items"][0]["snippet"]["channelTitle"],
+                            channel_id=response_json["items"][0]["snippet"]["channelId"],
+                            title=response_json["items"][0]["snippet"]["title"],
+                            link=None,
+                        )
+                        logger.info(f"Got the video by id: {video_id}")
+                    else:
+                        logger.warning(f"Unable to get video by id: {video_id}")
+            except Exception as error:
+                logger.error(f"Error during http connection try: {error}")
+
+        return video

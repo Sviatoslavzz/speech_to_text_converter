@@ -9,7 +9,7 @@ class DownloadOptions(Enum):
     EXIT = 4
 
 
-@dataclass
+@dataclass(slots=True)
 class YouTubeVideo:
     id: str
     link: str | None
@@ -19,6 +19,6 @@ class YouTubeVideo:
     channel_id: str
     kind: str
 
-    @staticmethod
-    def generate_link(video_id: str) -> str:
-        return "https://www.youtube.com/watch?v=" + video_id
+    def generate_link(self) -> str:
+        self.link = "https://www.youtube.com/watch?v=" + self.id
+        return self.link
