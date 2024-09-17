@@ -5,7 +5,7 @@ from pathlib import Path
 from loguru import logger
 from youtube_transcript_api import YouTubeTranscriptApi
 
-from yt_dlp_loader import YtLoader
+from yt_dlp_loader import YouTubeLoader
 
 
 async def get_caption_by_link(directory: Path, link: str) -> bool:
@@ -27,7 +27,7 @@ async def get_caption_by_link(directory: Path, link: str) -> bool:
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor(max_workers=20) as executor:
         title, valid = await loop.run_in_executor(
-            executor, YtLoader.get_title, link
+            executor, YouTubeLoader.get_title, link
         )  # TODO забирать название из гугл API
         if not valid:
             logger.warning(f"Unable to get video title for {link}")

@@ -8,7 +8,7 @@ from objects import DownloadOptions
 from transcribers.abscract import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 from youtube_api import get_channel_id_by_name, get_channel_videos
-from yt_dlp_loader import YtLoader
+from yt_dlp_loader import YouTubeLoader
 
 # TODO добавление через config
 WHISPER_MODEL = "small"
@@ -105,7 +105,7 @@ async def process_links(save_dir: Path, links: list[str]) -> None:
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     tasks_to_download = []
-    loader = YtLoader(save_dir)
+    loader = YouTubeLoader(save_dir)
     for link, result in zip(links, results, strict=False):
         if not result:
             logger.info("Found new link to download, adding...")
@@ -143,11 +143,11 @@ def main() -> None:
             asyncio.run(process_links(directory, links))
         elif menu_opt == DownloadOptions.VIDEO:
             quality = input("Enter a quality e.g. 720p: ")
-            loader = YtLoader(directory)
+            loader = YouTubeLoader(directory)
             for link in links:
                 loader.download_video(link, quality=quality)
         elif menu_opt == DownloadOptions.AUDIO:
-            loader = YtLoader(directory)
+            loader = YouTubeLoader(directory)
             for link in links:
                 print(loader.download_audio(link)[0])
 

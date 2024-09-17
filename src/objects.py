@@ -20,5 +20,5 @@ class YouTubeVideo:
     kind: str
 
     def generate_link(self) -> str:
-        self.link = "https://www.youtube.com/watch?v=" + self.id
+        self.link = f"https://www.youtube.com/watch?v={self.id}"
         return self.link

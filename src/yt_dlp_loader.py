@@ -5,8 +5,10 @@ from pathlib import Path
 import yt_dlp
 from loguru import logger
 
+from objects import YouTubeVideo
 
-class YtLoader:
+
+class YouTubeLoader:
     _audio_config = {
         "format": "bestaudio/best",  # the best audio quality available
         "postprocessors": [
@@ -28,64 +30,48 @@ class YtLoader:
 
     def __init__(self, directory: Path):
         self.dir = directory
-        self._title = "example"
-        logger.info("Yt_loader init")
+        logger.info("YouTubeLoader instance initialized")
 
-    def __del__(self):
-        if self._title.endswith(".webm"):
-            (self.dir / self._title).unlink(missing_ok=True)
+    # def __del__(self):
+    #     if self._title.endswith(".webm"):
+    #         (self.dir / self._title).unlink(missing_ok=True)
 
     def remove_audio_file(self) -> None:
         if self._title.endswith(".mp3"):
             (self.dir / self._title).unlink(missing_ok=True)
 
-    @classmethod
-    def get_title(cls, link_: str) -> (str, bool):
-        try:
-            with yt_dlp.YoutubeDL(cls._audio_config) as ydl:
-                info_dict = ydl.extract_info(link_, download=False)
-                cls._title = info_dict.get("title", None)
-                cls._title = cls._prepare_title(cls._title)
-                return cls._title, True
-        except yt_dlp.utils.DownloadError:
-            return cls._title, False
-
     @staticmethod
-    def _prepare_title(title_: str) -> str:
-        title_ = title_.encode("utf-8").decode("utf-8").rstrip(" .")
-        title_ = title_.lower()
-        replacements = {
-            ",": " ",
-            "!": " ",
-            "?": " ",
-            "'": " ",
-            "/": "",
-            " ": "_",
-            "\\": "",
-            "|": "",
-            ".": "_",
-        }
-        for old, new in replacements.items():
-            title_ = title_.replace(old, new)
-        return title_
+    def prepare_title(title: str) -> str:
+        # title = title.encode("utf-8").decode("utf-8")
+        new_title = ""
+        flag_fill = True
+        for letter in title:
+            if letter.isalpha():
+                new_title += letter
+                flag_fill = True
+            elif flag_fill:
+                new_title += "_"
+                flag_fill = False
 
-    def download_audio(self, link_: str) -> (str, bool):
-        self._title, is_valid = self.get_title(link_)
-        if is_valid:
-            self._audio_config["outtmpl"] = f"{self.dir}/{self._title}.%(ext)s"
-            try:
-                with yt_dlp.YoutubeDL(self._audio_config) as ydl:
-                    ydl.download([link_])
-                    self._title = self._title.replace(".webm", "")
-                    # self._title = self._title + ".mp3"  # TODO title validation required
-                    return f"{self._title}.mp3", True
-            except yt_dlp.utils.DownloadError:
-                print(f'An error occurred while downloading audio for: "{link_}"')
-                self._title = self._title + ".webm"
-                return "", False
-        else:
-            print(f'provided link is not valid: "{link_}"')
-            return "", False
+        return new_title.strip("_").lower()
+
+    def download_audio(self, video: YouTubeVideo) -> (bool, str):
+        """
+        Downloads audio from the YouTube video.
+        :param video: YouTubeVideo instance with the checked video meta
+        :return:
+        """
+        title = self.prepare_title(video.title)
+        ext = self._audio_config["postprocessors"][0]["preferredcodec"]
+        self._audio_config["outtmpl"] = f"{self.dir}/{title}.%(ext)s"
+        try:
+            with yt_dlp.YoutubeDL(self._audio_config) as ydl:
+                ydl.download([video.generate_link()])
+                logger.info(f"Audio downloaded to {self.dir}/{title}.{ext}")
+                return True, f"{self.dir}/{title}.{ext}"
+        except yt_dlp.utils.DownloadError:
+            logger.error(f"Exception during audio download for video id: {video.id}")
+            return False, ""
 
     async def async_download_audio(self, link_: str) -> (str, bool):
         loop = asyncio.get_running_loop()
