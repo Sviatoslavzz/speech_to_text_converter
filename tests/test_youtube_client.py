@@ -1,8 +1,8 @@
 import asyncio
+
 import pytest
 
 from objects import YouTubeVideo
-from youtube_api import YouTubeClient
 
 
 @pytest.mark.asyncio
@@ -36,9 +36,15 @@ async def test_get_channels_videos(youtube_api_client, correct_channels_list):
 async def test_async_speed(youtube_api_client, correct_channels_list, incorrect_channels_list):
     await asyncio.sleep(1)
 
-    tasks = [asyncio.create_task(youtube_api_client.get_channel_id_by_link(channel.get("link"))) for channel in correct_channels_list]
+    tasks = [
+        asyncio.create_task(youtube_api_client.get_channel_id_by_link(channel.get("link")))
+        for channel in correct_channels_list
+    ]
     tasks.extend(
-        [asyncio.create_task(youtube_api_client.get_channel_id_by_link(channel.get("link"))) for channel in incorrect_channels_list]
+        [
+            asyncio.create_task(youtube_api_client.get_channel_id_by_link(channel.get("link")))
+            for channel in incorrect_channels_list
+        ]
     )
 
     results = await asyncio.gather(*tasks)

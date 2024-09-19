@@ -1,6 +1,6 @@
 [project]
 name = "speech_to_text_converter"
-version = "1.0.1"
+version = "1.0.2"
 description = "rpoject aims to convert speech, received from youtube link to text and save it to the file"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
@@ -85,6 +85,7 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "ANN001", "ANN201"]
+"conftest.py" = ["S101", "ANN001", "ANN201"]
 
 [build-system]
 requires = ["setuptools"]

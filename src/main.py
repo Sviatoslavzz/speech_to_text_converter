@@ -3,12 +3,12 @@ from pathlib import Path
 
 from loguru import logger
 
-from captions import get_caption_by_link
 from objects import DownloadOptions
 from transcribers.abscract import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
-from youtube_api import get_channel_id_by_name, get_channel_videos
-from yt_dlp_loader import YouTubeLoader
+from youtube_workers.captions import get_caption_by_link
+from youtube_workers.youtube_api import get_channel_id_by_name, get_channel_videos
+from youtube_workers.yt_dlp_loader import YouTubeLoader
 
 # TODO добавление через config
 WHISPER_MODEL = "small"

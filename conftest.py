@@ -1,11 +1,11 @@
+import os
 from pathlib import Path
 
 import pytest
-import os
 from dotenv import load_dotenv
 
-from youtube_api import YouTubeClient
-from yt_dlp_loader import YouTubeLoader
+from youtube_workers.youtube_api import YouTubeClient
+from youtube_workers.yt_dlp_loader import YouTubeLoader
 
 SAVING_FOLDER = "saved_files"
 
@@ -75,4 +75,31 @@ def youtube_videos_wrong() -> list[str]:
         "https://www.youtube.com/shorts/jcVHxx&VWazg",
         "https://www.youtube.com/live/",
         "https://www.google.com/",
+    ]
+
+
+@pytest.fixture
+def youtube_videos_for_load() -> list[str]:
+    return [
+        "https://www.youtube.com/shorts/wB1b7m5QfMc",
+        "https://www.youtube.com/watch?v=thcEuMDWxoI&pp=ygUSbWVkaXRhdGlvbiBzZWNyZXRz",
+        "https://www.youtube.com/watch?v=Vj52NnZC21Y&pp=ygUSbWVkaXRhdGlvbiBzZWNyZXRz",
+        "https://www.youtube.com/shorts/A8qWpmdIADQ",
+    ]
+
+
+@pytest.fixture
+def youtube_only_shorts() -> list[str]:
+    return [
+        "https://www.youtube.com/shorts/YnKjN4bMACw",
+        "https://www.youtube.com/shorts/3NaK5EX5F9s",
+        "https://www.youtube.com/shorts/ms3YxA8rDdQ",
+    ]
+
+
+@pytest.fixture
+def youtube_music() -> list[str]:
+    return [
+        "https://www.youtube.com/watch?v=PHf83VFDw6g&t=3235s",
+        "https://www.youtube.com/watch?v=KeaRIJd8Z5E&t=4s",
     ]
