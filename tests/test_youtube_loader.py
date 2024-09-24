@@ -7,7 +7,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_title_preparation(youtube_loader, youtube_api_client, youtube_videos):
     for link in youtube_videos:
-        video = await youtube_api_client.form_video_from_link(link)
+        video = await youtube_api_client.get_video_by_link(link)
         title = youtube_loader.prepare_title(video.title)
         for letter in title:
             assert letter.isalpha() or letter == "_" or letter.isdigit()
@@ -19,7 +19,7 @@ async def test_download_audio_concurrent(youtube_loader, youtube_api_client, you
     tasks = []
     client = youtube_loader
     for link in youtube_videos_for_load:
-        video = await youtube_api_client.form_video_from_link(link)
+        video = await youtube_api_client.get_video_by_link(link)
         tasks.append(asyncio.create_task(client.download_audio(video)))
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -39,7 +39,7 @@ async def test_download_audio(youtube_loader, youtube_api_client, youtube_videos
     await asyncio.sleep(1)
     client = youtube_loader
     for link in youtube_videos_for_load:
-        video = await youtube_api_client.form_video_from_link(link)
+        video = await youtube_api_client.get_video_by_link(link)
         state, result_path = await client.download_audio(video)
         assert state is True
         assert isinstance(result_path, Path)
@@ -52,7 +52,7 @@ async def test_download_video(youtube_loader, youtube_api_client, youtube_videos
     await asyncio.sleep(1)
     client = youtube_loader
     for link in youtube_videos_for_load:
-        video = await youtube_api_client.form_video_from_link(link)
+        video = await youtube_api_client.get_video_by_link(link)
         state, result_path = await client.download_video(video, required_height=240)
         assert state is True
         assert isinstance(result_path, Path)
@@ -66,7 +66,7 @@ async def test_download_video_concurrent(youtube_loader, youtube_api_client, you
     tasks = []
     client = youtube_loader
     for link in youtube_videos_for_load:
-        video = await youtube_api_client.form_video_from_link(link)
+        video = await youtube_api_client.get_video_by_link(link)
         tasks.append(asyncio.create_task(client.download_video(video)))
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -84,8 +84,8 @@ async def test_download_video_concurrent(youtube_loader, youtube_api_client, you
 @pytest.mark.asyncio
 async def test_get_captions(youtube_loader, youtube_api_client, youtube_videos, youtube_only_shorts):
     for link in youtube_videos + youtube_only_shorts:
-        video = await youtube_api_client.form_video_from_link(link)
-        state, result_path = youtube_loader.get_captions(video)
+        video = await youtube_api_client.get_video_by_link(link)
+        state, result_path = await youtube_loader.get_captions(video)
         assert state is True
         assert isinstance(result_path, Path)
         with result_path.open(mode="r", encoding="utf-8") as file:
@@ -96,7 +96,7 @@ async def test_get_captions(youtube_loader, youtube_api_client, youtube_videos, 
 @pytest.mark.asyncio
 async def test_get_captions_wrong(youtube_loader, youtube_api_client, youtube_music):
     for link in youtube_music:
-        video = await youtube_api_client.form_video_from_link(link)
-        state, result_path = youtube_loader.get_captions(video)
+        video = await youtube_api_client.get_video_by_link(link)
+        state, result_path = await youtube_loader.get_captions(video)
         assert state is False
         assert isinstance(result_path, Path)

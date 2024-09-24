@@ -65,14 +65,10 @@ class YouTubeLoader:
         :return:
         """
         async with self.semaphore:
-            return await self._download_audio(video)
-
-    async def _download_audio(self, video: YouTubeVideo) -> (bool, Path):
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(self.pool, self._sync_download_audio, video)
+            return await self.__run_async(video, self._sync_download_audio)
 
     def _sync_download_video(
-        self, video: YouTubeVideo, required_ext: str = "mp4", required_height: int = 720, fps_limit: int = 30
+            self, video: YouTubeVideo, required_ext: str = "mp4", required_height: int | None = 720, fps_limit: int = 30
     ) -> (bool, Path):
         video.generate_link()
 
@@ -91,18 +87,18 @@ class YouTubeLoader:
                 return True, Path(f"{self.dir}/{title}.{required_ext}")
 
         except yt_dlp.utils.DownloadError:
-            logger.error(f"Exception during audio download for video id: {video.id}")
+            logger.error(f"Exception during video download for video id: {video.id}")
         except Exception as e:
-            logger.error(f"Exception during audio download for video id: {video.id}, {e.__repr__()}")
+            logger.error(f"Exception during video download for video id: {video.id}, {e.__repr__()}")
 
         return False, Path()
 
     async def download_video(
-        self,
-        video: YouTubeVideo,
-        required_ext: str = "mp4",  # TODO дописать конвертацию в требуемый формат если не найден
-        required_height: int = 720,
-        fps_limit: int = 30,
+            self,
+            video: YouTubeVideo,
+            required_ext: str = "mp4",  # TODO дописать конвертацию в требуемый формат если не найден
+            required_height: int = 720,
+            fps_limit: int = 30,
     ) -> (bool, Path):
         """
         Downloads video from the YouTube video.
@@ -113,17 +109,28 @@ class YouTubeLoader:
         :return:
         """
         async with self.semaphore:
-            return await self._download_video(video, required_ext, required_height, fps_limit)
+            return await self.__run_async(video, self._sync_download_video, required_ext, required_height, fps_limit)
 
-    async def _download_video(
-        self, video: YouTubeVideo, required_ext: str, required_height: int, fps_limit: int
-    ) -> (bool, Path):
+    async def __run_async(
+            self, video: YouTubeVideo, function, *args) -> (bool, Path):
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(
-            self.pool, self._sync_download_video, video, required_ext, required_height, fps_limit
-        )
+        return await loop.run_in_executor(self.pool, function, video, *args)
 
-    def get_captions(self, video: YouTubeVideo, preferred_language: str = "ru") -> (bool, Path):
+    async def get_captions(
+            self,
+            video: YouTubeVideo,
+            preferred_language: str | None = "ru"
+    ) -> (bool, Path):
+        """
+        Downloads captions from the YouTube video.
+        :param video: YouTubeVideo instance with the checked video meta
+        :param preferred_language: e.g. "ru"
+        :return: bool, Path
+        """
+        async with self.semaphore:
+            return await self.__run_async(video, self._sync_get_captions, preferred_language)
+
+    def _sync_get_captions(self, video: YouTubeVideo, preferred_language: str | None = "ru") -> (bool, Path):
         title = self.prepare_title(video.title)
         transcript = None
 
@@ -136,7 +143,7 @@ class YouTubeLoader:
                     transcript = transcript_obj.fetch()
                     break
             if (
-                not transcript and transcript_obj_any and transcript_obj_any.is_translatable
+                    not transcript and transcript_obj_any and transcript_obj_any.is_translatable
             ):  # TODO загружает [music]...
                 transcript = transcript_obj_any.translate("en").fetch()
             elif not transcript and transcript_obj_any:

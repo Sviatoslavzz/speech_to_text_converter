@@ -126,7 +126,7 @@ class YouTubeClient:
 
         return amount, videos
 
-    async def form_video_from_link(self, link: str) -> YouTubeVideo | None:
+    async def get_video_by_link(self, link: str) -> YouTubeVideo | None:
         patterns = [r"v=([^&]+)", r"shorts/([^&]+)", r"live/([^&]+)"]
         video_obj = None
         for pattern in patterns:
