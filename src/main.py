@@ -76,21 +76,19 @@ def menu() -> DownloadOptions:
         print("Sorry, you entered a wrong option")
 
 
-def transcriber_saver(transcriber: AbstractTranscriber, save_dir: Path, file_name: str) -> None:
+def transcriber_saver(transcriber: AbstractTranscriber, file_path: Path) -> None:
     """
     Checks the save_dir, launches transcription process, saves the result in .txt
     :param transcriber: current class
-    :param save_dir: saving directory
-    :param file_name: source file
+    :param file_path: source file path
     :return: None
     """
-    source_path = save_dir / file_name
-    if not source_path.is_file():
-        logger.error(f"File does not exist: {source_path}")
-        raise FileNotFoundError(f"{source_path} not found")
+    if not file_path.is_file():
+        logger.error(f"File does not exist: {file_path}")
+        raise FileNotFoundError(f"{file_path} not found")
 
-    result = transcriber.transcribe(path=source_path)
-    target_file = source_path.with_suffix(".txt")
+    result = transcriber.transcribe(path=file_path)
+    target_file = file_path.with_suffix(".txt")
 
     try:
         with target_file.open(mode="w") as file:
@@ -101,57 +99,56 @@ def transcriber_saver(transcriber: AbstractTranscriber, save_dir: Path, file_nam
         raise OSError("Failed to save transcription") from err
 
 
-# async def process_links(save_dir: Path, links: list[str]) -> None:
-#     """
-#     Tries to get captions by YT video link, in case of fail tries to transcribe loaded audio file to text
-#     :param save_dir: directory to save the transcribed videos
-#     :param links: list of links
-#     :return: None
-#     """
-#     tasks = [get_caption_by_link(save_dir, link) for link in links]
-#     logger.info("Subtitles loading process is started")
-#
-#     results = await asyncio.gather(*tasks, return_exceptions=True)
-#
-#     tasks_to_download = []
-#     loader = YouTubeLoader(save_dir)
-#     for link, result in zip(links, results, strict=False):
-#         if not result:
-#             logger.info("Found new link to download, adding...")
-#             tasks_to_download.append(loader.async_download_audio(link))
-#     results_to_download = await asyncio.gather(*tasks_to_download, return_exceptions=True)
-#
-#     transcriber = None
-#     for file_path, success in results_to_download:
-#         if success:
-#             if not transcriber:
-#                 transcriber = TRANSCRIBER(model=WHISPER_MODEL)
-#                 logger.info(f"Transcriber {transcriber.__class__.__name__} initialized")
-#             logger.info("Create new thread for transcription")
-#             await asyncio.get_running_loop().run_in_executor(None, transcriber_saver, transcriber, save_dir, file_path)
+async def process_links(save_dir: Path, videos: list[YouTubeVideo]) -> None:
+    """
+    Tries to get captions by YT video link, in case of fail tries to transcribe loaded audio file to text
+    :param save_dir: directory to save the transcribed videos
+    :param videos: list of links
+    :return: None
+    """
+    loader = YouTubeLoader(save_dir)
+    tasks_to_download = []
+    for video in videos:
+        tasks_to_download.append(asyncio.create_task(loader.download_audio(video)))
+
+    download_results = await asyncio.gather(*tasks_to_download, return_exceptions=True)
+
+    transcriber = None
+    for success, path_ in download_results:
+        if success:
+            if not transcriber:
+                transcriber = TRANSCRIBER(model=WHISPER_MODEL)
+            logger.info("Create new thread for transcription")
+            await asyncio.get_running_loop().run_in_executor(None, transcriber_saver, transcriber, path_)
+            path_.unlink(missing_ok=True)
 
 
 async def main() -> None:
     directory: Path = make_save_dir()
-    loader = YouTubeLoader(directory)
 
     chooser = input("Please choose the mode: 1 - file, 2 - youtube\n")
+
     if chooser == "1":
         logger.info("File mode chosen")
-        source_filename = input("please input path:\n")
+        source_filename = input(f"please place file in {directory} and write a filename:\n")
         logger.info(f"Source file name is: {source_filename}")
         transcriber = TRANSCRIBER(WHISPER_MODEL)
-        transcriber_saver(transcriber, directory, source_filename)
+        transcriber_saver(transcriber, directory / source_filename)
     elif chooser == "2":
         videos = await collect_videos()
         if not videos:
             print(">> You did not enter any link! <<")
             return
         menu_opt = menu()
+        loader = YouTubeLoader(directory)
         if menu_opt == DownloadOptions.TEXT:
+            remained_videos = []
             for video in videos:
-                await loader.get_captions(video)
-            # asyncio.run(process_links(directory, videos))
+                result, path_ = await loader.get_captions(video)
+                if not result:
+                    remained_videos.append(video)
+            if remained_videos:
+                await process_links(directory, remained_videos)
         elif menu_opt == DownloadOptions.VIDEO:
             quality = int(input("Enter a quality e.g. 720: "))
             for video in videos:

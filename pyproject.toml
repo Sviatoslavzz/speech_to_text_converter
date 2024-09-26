@@ -1,7 +1,7 @@
 [project]
-name = "speech_to_text_converter"
-version = "1.0.2"
-description = "rpoject aims to convert speech, received from youtube link to text and save it to the file"
+name = "youtube_loader_service"
+version = "1.1.0"
+description = "service is capable of download audio/video/text by youtube video/channel link and transcribe in case transcript is missing"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
 
