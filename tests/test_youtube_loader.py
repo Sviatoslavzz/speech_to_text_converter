@@ -100,3 +100,18 @@ async def test_get_captions_wrong(youtube_loader, youtube_api_client, youtube_mu
         state, result_path = await youtube_loader.get_captions(video)
         assert state is False
         assert isinstance(result_path, Path)
+
+@pytest.mark.asyncio
+async def test_get_captions_async(youtube_loader, youtube_api_client, youtube_videos, youtube_only_shorts):
+    tasks = []
+    for link in youtube_videos + youtube_only_shorts:
+        video = await youtube_api_client.get_video_by_link(link)
+        tasks.append(asyncio.create_task(youtube_loader.get_captions(video)))
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    for state, result_path in results:
+        assert state is True
+        assert isinstance(result_path, Path)
+        with result_path.open(mode="r", encoding="utf-8") as file:
+            assert len(file.read()) > 0
+        result_path.unlink(missing_ok=True)

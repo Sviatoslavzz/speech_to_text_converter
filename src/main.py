@@ -1,9 +1,10 @@
 import asyncio
+import os
 from pathlib import Path
 
-from loguru import logger
 from dotenv import load_dotenv
-import os
+from loguru import logger
+
 from objects import DownloadOptions, YouTubeVideo
 from transcribers.abscract import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
@@ -31,10 +32,10 @@ def make_save_dir() -> Path:
     return dir_
 
 
-async def collect_videos() -> list:
+async def collect_videos() -> list[YouTubeVideo | None]:
     client = YouTubeClient(get_env().get("YOUTUBE_API"))  # TODO change to config
 
-    videos: list[YouTubeVideo] = []
+    videos = []
     channel_link = input(
         """You can enter a channel link to collect all videos from a channel, """
         """or press enter to proceed with simple links:\n"""

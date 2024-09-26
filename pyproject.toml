@@ -15,6 +15,7 @@ dependencies = [
     "google-api-python-client>=2.140.0",
     "loguru>=0.7.2",
     "aiohttp",
+    "typeguard<5"
 ]
 requires-python = ">=3.12"
 
@@ -50,6 +51,9 @@ ignore = [
     "T201", # `print` found
     "RUF003", # Comment contains smth
     "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+    "ANN003", # Missing type annotation for `**kwargs`
+    "ANN002", # Missing type annotation for `*args`
+    "ANN001", # Missing type annotation for function argument `self`
 ]
 
 extend-select = [

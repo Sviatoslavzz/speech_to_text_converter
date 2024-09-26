@@ -1,6 +1,8 @@
 import asyncio
 import copy
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from functools import wraps
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +14,11 @@ from objects import YouTubeVideo
 
 
 class YouTubeLoader:
+    """
+    Client loader.
+    Using yt_dlp and youtube_transcript_api libs.
+    internal settings: Semaphore number, ThreadPoolExecutor workers number
+    """
     __config: dict[str, Any] = {
         "quiet": True,
     }
@@ -24,6 +31,11 @@ class YouTubeLoader:
 
     @staticmethod
     def prepare_title(title: str) -> str:
+        """
+        Normalizes a string to make it lowercase consisting of letters, digits and underscores.
+        :param title: a string to normalize
+        :return: str
+        """
         new_title = ""
         flag_fill = True
         for letter in title:
@@ -36,7 +48,23 @@ class YouTubeLoader:
 
         return new_title.strip("_").lower()
 
-    def _sync_download_audio(self, video: YouTubeVideo) -> (bool, Path):
+    @staticmethod
+    def _async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        async def wrapper(self, *args, **kwargs):  # noqa ANN202
+            async with self.semaphore:
+                loop = asyncio.get_running_loop()
+                return await loop.run_in_executor(self.pool, lambda: func(self, *args, **kwargs))
+
+        return wrapper
+
+    @_async_wrap
+    def download_audio(self, video: YouTubeVideo) -> (bool, Path):
+        """
+        Downloads audio from the YouTube video.
+        :param video: YouTubeVideo instance with the checked video meta
+        :return: tuple(bool, Path)
+        """
         title = self.prepare_title(video.title)
         config = copy.deepcopy(self.__config)
         config["postprocessors"] = [
@@ -58,18 +86,22 @@ class YouTubeLoader:
             logger.error(f"Exception during audio download for video id: {video.id}")
             return False, Path()
 
-    async def download_audio(self, video: YouTubeVideo) -> (bool, Path):
-        """
-        Downloads audio from the YouTube video.
-        :param video: YouTubeVideo instance with the checked video meta
-        :return:
-        """
-        async with self.semaphore:
-            return await self.__run_async(video, self._sync_download_audio)
-
-    def _sync_download_video(
-            self, video: YouTubeVideo, required_ext: str = "mp4", required_height: int | None = 720, fps_limit: int = 30
+    @_async_wrap
+    def download_video(
+            self,
+            video: YouTubeVideo,
+            required_ext: str = "mp4",
+            required_height: int | None = 720,
+            fps_limit: int = 30
     ) -> (bool, Path):
+        """
+        Downloads video from the YouTube video.
+        :param video: YouTubeVideo instance with the checked video meta
+        :param required_ext: required video format (like mp4 or webm)
+        :param required_height: required quality
+        :param fps_limit: 30 or 60
+        :return: tuple(bool, Path)
+        """
         video.generate_link()
 
         title = self.prepare_title(video.title)
@@ -93,44 +125,14 @@ class YouTubeLoader:
 
         return False, Path()
 
-    async def download_video(
-            self,
-            video: YouTubeVideo,
-            required_ext: str = "mp4",  # TODO дописать конвертацию в требуемый формат если не найден
-            required_height: int = 720,
-            fps_limit: int = 30,
-    ) -> (bool, Path):
-        """
-        Downloads video from the YouTube video.
-        :param video: YouTubeVideo instance with the checked video meta
-        :param required_ext: required video format (like mp4 or webm)
-        :param required_height: required quality
-        :param fps_limit: 30 or 60
-        :return:
-        """
-        async with self.semaphore:
-            return await self.__run_async(video, self._sync_download_video, required_ext, required_height, fps_limit)
-
-    async def __run_async(
-            self, video: YouTubeVideo, function, *args) -> (bool, Path):
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(self.pool, function, video, *args)
-
-    async def get_captions(
-            self,
-            video: YouTubeVideo,
-            preferred_language: str | None = "ru"
-    ) -> (bool, Path):
+    @_async_wrap
+    def get_captions(self, video: YouTubeVideo, preferred_language: str | None = "ru") -> (bool, Path):
         """
         Downloads captions from the YouTube video.
         :param video: YouTubeVideo instance with the checked video meta
         :param preferred_language: e.g. "ru"
-        :return: bool, Path
+        :return: tuple(bool, Path)
         """
-        async with self.semaphore:
-            return await self.__run_async(video, self._sync_get_captions, preferred_language)
-
-    def _sync_get_captions(self, video: YouTubeVideo, preferred_language: str | None = "ru") -> (bool, Path):
         title = self.prepare_title(video.title)
         transcript = None
 
