@@ -1,5 +1,4 @@
 import asyncio
-import re
 from pathlib import Path
 
 from aiogram import F, Router
@@ -7,6 +6,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, FSInputFile, Message
 from google.api_core.exceptions import BadRequest
+from humanfriendly.terminal import message
 from loguru import logger
 
 from app.keyboards import main_menu, options_menu
@@ -23,6 +23,7 @@ from objects import DownloadOptions, UserRoute
 from transcribers.abscract import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 from transcribers.worker import TranscriberWorker
+from app.main_workers import download_video_worker
 
 # TODO добавление через config
 WHISPER_MODEL = "small"
@@ -125,9 +126,12 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer("Принято в работу!")
 
-    # if options["option"] == "video":
-    #     links = re.split(r'[ ,\n]+', options["links"])
-
+    async for result, path_ in download_video_worker(options):
+        if result:
+            await callback.message.answer_video(FSInputFile(Path(path_)))
+            path_.unlink(missing_ok=True)
+        else:
+            await callback.message.answer(f"Не смог скачать видео по ссылке: {path_}")
 
 
 @router.callback_query(F.data == "download_audio")
