@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
+from transcribers.worker import TranscriberWorker
 from youtube_workers.youtube_api import YouTubeClient
 from youtube_workers.yt_dlp_loader import YouTubeLoader
 
@@ -33,6 +34,10 @@ def youtube_api_client(get_env):
 @pytest.fixture
 def youtube_loader(saving_path):
     return YouTubeLoader(saving_path)
+
+@pytest.fixture
+def transcriber_worker():
+    return TranscriberWorker()
 
 
 @pytest.fixture
@@ -102,4 +107,25 @@ def youtube_music() -> list[str]:
     return [
         "https://www.youtube.com/watch?v=PHf83VFDw6g&t=3235s",
         "https://www.youtube.com/watch?v=KeaRIJd8Z5E&t=4s",
+    ]
+
+@pytest.fixture
+def videos_without_subtitles() -> list[str]:
+    return [
+        "https://www.youtube.com/shorts/ixaKx5GKFJM",
+        "https://www.youtube.com/shorts/Sgfc-5C_76k",
+        "https://www.youtube.com/shorts/dNTo51QSO6g",
+    ]
+
+@pytest.fixture
+def files():
+    return [
+        "test_1.mp4",
+        "test_2.mp4",
+        "test_3.mp4",
+        "test_4.mp4",
+        "test_5.mp4",
+        "test_6.mp4",
+        "test_7.mp4",
+        "test_8.mp4",
     ]

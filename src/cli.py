@@ -8,6 +8,7 @@ from loguru import logger
 from objects import DownloadOptions, YouTubeVideo
 from transcribers.abscract import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
+from transcribers.worker import TranscriberWorker
 from youtube_workers.youtube_api import YouTubeClient
 from youtube_workers.yt_dlp_loader import YouTubeLoader
 
@@ -76,29 +77,6 @@ def menu() -> DownloadOptions:
         print("Sorry, you entered a wrong option")
 
 
-def transcriber_saver(transcriber: AbstractTranscriber, file_path: Path) -> None:
-    """
-    Checks the save_dir, launches transcription process, saves the result in .txt
-    :param transcriber: current class
-    :param file_path: source file path
-    :return: None
-    """
-    if not file_path.is_file():
-        logger.error(f"File does not exist: {file_path}")
-        raise FileNotFoundError(f"{file_path} not found")
-
-    result = transcriber.transcribe(path=file_path)
-    target_file = file_path.with_suffix(".txt")
-
-    try:
-        with target_file.open(mode="w") as file:
-            file.write(result)
-        logger.info(f"Transcription saved\ntitle: {target_file}\n")
-    except OSError as err:
-        logger.error(f"Unable to save transcription to {target_file}")
-        raise OSError("Failed to save transcription") from err
-
-
 async def process_links(save_dir: Path, videos: list[YouTubeVideo]) -> None:
     """
     Tries to get captions by YT video link, in case of fail tries to transcribe loaded audio file to text
@@ -107,19 +85,15 @@ async def process_links(save_dir: Path, videos: list[YouTubeVideo]) -> None:
     :return: None
     """
     loader = YouTubeLoader(save_dir)
-    tasks_to_download = []
-    for video in videos:
-        tasks_to_download.append(asyncio.create_task(loader.download_audio(video)))
-
+    tasks_to_download = [asyncio.create_task(loader.download_audio(video) for video in videos)]
     download_results = await asyncio.gather(*tasks_to_download, return_exceptions=True)
 
-    transcriber = None
+    worker = None
     for success, path_ in download_results:
         if success:
-            if not transcriber:
-                transcriber = TRANSCRIBER(model=WHISPER_MODEL)
-            logger.info("Create new thread for transcription")
-            await asyncio.get_running_loop().run_in_executor(None, transcriber_saver, transcriber, path_)
+            if not worker:
+                worker = TranscriberWorker()
+            await worker.transcribe(path_)
             path_.unlink(missing_ok=True)
 
 
@@ -132,8 +106,8 @@ async def main() -> None:
         logger.info("File mode chosen")
         source_filename = input(f"please place file in {directory} and write a filename:\n")
         logger.info(f"Source file name is: {source_filename}")
-        transcriber = TRANSCRIBER(WHISPER_MODEL)
-        transcriber_saver(transcriber, directory / source_filename)
+        worker = TranscriberWorker()
+        await worker.transcribe(directory / source_filename)
     elif chooser == "2":
         videos = await collect_videos()
         if not videos:

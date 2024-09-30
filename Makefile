@@ -3,7 +3,10 @@ export
 
 .PHONY: uninstall_all_dependencies
 
-run:
+run_bot:
+	python3 src/bot.py
+
+run_cli:
 	python3 src/main.py
 
 install:
