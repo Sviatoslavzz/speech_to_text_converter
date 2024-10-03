@@ -15,19 +15,30 @@ from objects import YouTubeVideo
 
 class YouTubeLoader:
     """
-    Client loader.
+    Singleton client loader.
     Using yt_dlp and youtube_transcript_api libs.
     internal settings: Semaphore number, ThreadPoolExecutor workers number
     """
+
+    _instance = None
     __config: dict[str, Any] = {
         "quiet": True,
     }
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self, directory: Path):
         self.dir = directory
         self.semaphore = asyncio.Semaphore(20)
         self.pool = ThreadPoolExecutor(max_workers=20)
         logger.info("YouTubeLoader initialized")
+
+    @classmethod
+    def get_instance(cls):
+        return cls._instance
 
     @staticmethod
     def prepare_title(title: str) -> str:

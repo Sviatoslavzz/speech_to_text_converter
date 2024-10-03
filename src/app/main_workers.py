@@ -28,29 +28,76 @@ def make_save_dir() -> Path:
     return dir_
 
 
-async def download_video_worker(options: dict[str, Any]) -> AsyncGenerator[tuple[bool, Path], None]:
-    directory: Path = make_save_dir()
+async def channel_worker(options: dict[str, Any]) -> AsyncGenerator[tuple[bool, Path], None]:
+    youtube_client = YouTubeClient(get_env().get("YOUTUBE_API")) \
+        if not YouTubeClient.get_instance() \
+        else YouTubeClient.get_instance()
 
-    youtube_client = YouTubeClient(get_env().get("YOUTUBE_API"))
-    youtube_loader = YouTubeLoader(directory)
+    youtube_loader = YouTubeLoader(make_save_dir()) \
+        if not YouTubeLoader.get_instance() \
+        else YouTubeLoader.get_instance()
 
-    if options["option"] == "video":  # video, file, channel
-        links = re.split(r'[ ,\n]+', options["links"])
-        for link in links:
-            video = await youtube_client.get_video_by_link(link)
-            if not video:
-                yield False, link
-            else:
-                yield await youtube_loader.download_video(video, required_height=480)
-
-    elif options["option"] == "channel":
-        channel_id = await youtube_client.get_channel_id_by_link(options["links"])
-        if not channel_id:
+    channel_id = await youtube_client.get_channel_id_by_link(options["links"])
+    if not channel_id:
+        yield False, options["links"]
+    else:
+        amount, videos = await youtube_client.get_channel_videos(channel_id)
+        if not videos:
             yield False, options["links"]
         else:
-            amount, videos = await youtube_client.get_channel_videos(channel_id)
-            if not videos:
-                yield False, options["links"]
-            else:
-                for video in videos:
-                    yield await youtube_loader.download_video(video, required_height=480)
+            for video in videos:
+                yield await youtube_loader.download_video(video, required_height=480)
+
+
+async def download_video_worker(options: dict[str, Any]) -> AsyncGenerator[tuple[bool, Path], None]:
+    youtube_client = YouTubeClient(get_env().get("YOUTUBE_API")) \
+        if not YouTubeClient.get_instance() \
+        else YouTubeClient.get_instance()
+
+    youtube_loader = YouTubeLoader(make_save_dir()) \
+        if not YouTubeLoader.get_instance() \
+        else YouTubeLoader.get_instance()
+
+    links = re.split(r'[ ,\n]+', options["links"])
+    for link in links:
+        video = await youtube_client.get_video_by_link(link.strip())
+        if not video:
+            yield False, link
+        else:
+            yield await youtube_loader.download_video(video, required_height=480)
+
+
+async def download_audio_worker(options: dict[str, Any]) -> AsyncGenerator[tuple[bool, Path], None]:
+    youtube_client = YouTubeClient(get_env().get("YOUTUBE_API")) \
+        if not YouTubeClient.get_instance() \
+        else YouTubeClient.get_instance()
+
+    youtube_loader = YouTubeLoader(make_save_dir()) \
+        if not YouTubeLoader.get_instance() \
+        else YouTubeLoader.get_instance()
+
+    links = re.split(r'[ ,\n]+', options["links"])
+    for link in links:
+        video = await youtube_client.get_video_by_link(link.strip())
+        if not video:
+            yield False, link
+        else:
+            yield await youtube_loader.download_audio(video)
+
+
+async def download_subtitles_worker(options: dict[str, Any]) -> AsyncGenerator[tuple[bool, Path], None]:
+    youtube_client = YouTubeClient(get_env().get("YOUTUBE_API")) \
+        if not YouTubeClient.get_instance() \
+        else YouTubeClient.get_instance()
+
+    youtube_loader = YouTubeLoader(make_save_dir()) \
+        if not YouTubeLoader.get_instance() \
+        else YouTubeLoader.get_instance()
+
+    links = re.split(r'[ ,\n]+', options["links"])
+    for link in links:
+        video = await youtube_client.get_video_by_link(link.strip())
+        if not video:
+            yield False, link
+        else:
+            yield await youtube_loader.get_captions(video)

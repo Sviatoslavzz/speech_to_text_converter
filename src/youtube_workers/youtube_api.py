@@ -7,9 +7,24 @@ from objects import YouTubeVideo
 
 
 class YouTubeClient:
+    """
+    Singleton YouTube API client.
+    Using official YouTube API libs.
+    """
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.base_url = "https://www.googleapis.com/youtube/v3"
+
+    @classmethod
+    def get_instance(cls):
+        return cls._instance
 
     async def get_channel_id_by_link(self, link: str) -> str | None:
         """

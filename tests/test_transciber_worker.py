@@ -19,7 +19,7 @@ async def test_e2e(saving_path, videos_without_subtitles, youtube_loader, transc
         video = await youtube_api_client.get_video_by_link(link)
         state, path_ = await youtube_loader.download_audio(video)
         assert state is True
-        result = await transcriber_worker.transcribe(path_)
+        result, path_ = await transcriber_worker.transcribe(path_)
         assert result is True
         path_.unlink(missing_ok=True)
         path_.with_suffix(".txt").unlink(missing_ok=True)
@@ -29,7 +29,7 @@ async def example_task(youtube_api_client, youtube_loader, transcriber_worker, l
     video = await youtube_api_client.get_video_by_link(link)
     state, path_ = await youtube_loader.download_audio(video)
     assert state is True
-    result = await transcriber_worker.transcribe(path_)
+    result, path_ = await transcriber_worker.transcribe(path_)
     assert result is True
     path_.unlink(missing_ok=True)
     path_.with_suffix(".txt").unlink(missing_ok=True)
