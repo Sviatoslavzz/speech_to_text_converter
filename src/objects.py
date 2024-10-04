@@ -28,6 +28,6 @@ class YouTubeVideo:
 
 class UserRoute(StatesGroup):
     option = State()  # video / channel / file
-    links = State()  # list of links / channel link
+    videos = State()  # list of links / channel link
     file = State()
     action = State()  # what to do
