@@ -34,7 +34,7 @@ class YouTubeLoader:
         self.dir = directory
         self.semaphore = asyncio.Semaphore(20)
         self.pool = ThreadPoolExecutor(max_workers=20)
-        logger.info("YouTubeLoader initialized")
+        logger.info("YouTubeLoader initialized (singleton)")
 
     @classmethod
     def get_instance(cls):
@@ -70,13 +70,14 @@ class YouTubeLoader:
         return wrapper
 
     @_async_wrap
-    def download_audio(self, video: YouTubeVideo) -> (bool, Path):
+    def download_audio(self, video: YouTubeVideo, uid: str = "") -> (bool, Path):
         """
         Downloads audio from the YouTube video.
         :param video: YouTubeVideo instance with the checked video meta
+        :param uid: Unique id
         :return: tuple(bool, Path)
         """
-        title = self.prepare_title(video.title)
+        title = f"{uid}_{self.prepare_title(video.title)}"
         config = copy.deepcopy(self.__config)
         config["postprocessors"] = [
             {
@@ -91,10 +92,10 @@ class YouTubeLoader:
         try:
             with yt_dlp.YoutubeDL(config) as ydl:
                 ydl.download([video.generate_link()])
-                logger.info(f"Audio downloaded to {self.dir}/{title}.{ext}")
+                logger.info(f"{uid} Audio downloaded to {self.dir}/{title}.{ext}")
                 return True, Path(f"{self.dir}/{title}.{ext}")
         except yt_dlp.utils.DownloadError:
-            logger.error(f"Exception during audio download for video id: {video.id}")
+            logger.error(f"{uid} Exception during audio download for video id: {video.id}")
             return False, Path()
 
     @_async_wrap
@@ -103,7 +104,8 @@ class YouTubeLoader:
             video: YouTubeVideo,
             required_ext: str = "mp4",
             required_height: int | None = 720,
-            fps_limit: int = 30
+            fps_limit: int = 30,
+            uid: str = ""
     ) -> (bool, Path):
         """
         Downloads video from the YouTube video.
@@ -111,11 +113,12 @@ class YouTubeLoader:
         :param required_ext: required video format (like mp4 or webm)
         :param required_height: required quality
         :param fps_limit: 30 or 60
+        :param uid: unique id
         :return: tuple(bool, Path)
         """
         video.generate_link()
 
-        title = self.prepare_title(video.title)
+        title = f"{uid}_{self.prepare_title(video.title)}"
         config = copy.deepcopy(self.__config)
         config["outtmpl"] = f"{self.dir}/{title}.%(ext)s"
         config["format"] = (
@@ -125,26 +128,27 @@ class YouTubeLoader:
         try:
             with yt_dlp.YoutubeDL(config) as ydl:
                 ydl.download([video.link])
-                logger.info(f"Video downloaded to {self.dir}/{title}.{required_ext}")
+                logger.info(f"{uid} Video downloaded to {self.dir}/{title}.{required_ext}")
 
                 return True, Path(f"{self.dir}/{title}.{required_ext}")
 
         except yt_dlp.utils.DownloadError:
-            logger.error(f"Exception during video download for video id: {video.id}")
+            logger.error(f"{uid} Exception during video download for video id: {video.id}")
         except Exception as e:
-            logger.error(f"Exception during video download for video id: {video.id}, {e.__repr__()}")
+            logger.error(f"{uid} Exception during video download for video id: {video.id}, {e.__repr__()}")
 
         return False, Path()
 
     @_async_wrap
-    def get_captions(self, video: YouTubeVideo, preferred_language: str | None = "ru") -> (bool, Path):
+    def get_captions(self, video: YouTubeVideo, preferred_language: str | None = "ru", uid: str = "") -> (bool, Path):
         """
         Downloads captions from the YouTube video.
         :param video: YouTubeVideo instance with the checked video meta
         :param preferred_language: e.g. "ru"
+        :param uid: unique id
         :return: tuple(bool, Path)
         """
-        title = self.prepare_title(video.title)
+        title = f"{uid}_{self.prepare_title(video.title)}"
         transcript = None
 
         try:
@@ -164,10 +168,10 @@ class YouTubeLoader:
             elif not transcript:
                 raise NoTranscriptFound
 
-            logger.info(f"Successfully got a transcript for video: {video.id}")
+            logger.info(f"{uid} Successfully got a transcript for video: {video.id}")
 
         except (NoTranscriptFound, TranscriptsDisabled, Exception) as e:
-            logger.error(f"{e.__repr__()}")
+            logger.error(f"{uid} {e.__repr__()}")
 
             return False, Path()
 
@@ -175,6 +179,6 @@ class YouTubeLoader:
         with target_path.open("w", encoding="utf-8") as file:
             for entry in transcript:
                 file.write(entry["text"].replace("\n", "") + " ")
-        logger.info(f"Transcript saved to: {target_path}")
+        logger.info(f"{uid} Transcript saved to: {target_path}")
 
         return True, target_path

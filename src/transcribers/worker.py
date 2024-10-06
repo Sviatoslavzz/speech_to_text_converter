@@ -14,14 +14,24 @@ from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 
 
 class TranscriberWorker:
+    _instance = None
     _WHISPER_MODEL = "small"
     _TRANSCRIBER: type[AbstractTranscriber] = FasterWhisperTranscriber
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self):
         self.transcriber = self._TRANSCRIBER(model=self._WHISPER_MODEL)
         self.semaphore = asyncio.Semaphore(4)
         self.pool = ThreadPoolExecutor(max_workers=4)
         logger.info("TranscriberWorker initialized")
+
+    @classmethod
+    def get_instance(cls):
+        return cls._instance
 
     @staticmethod
     def _async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -55,4 +65,3 @@ class TranscriberWorker:
             return True, file_path.with_suffix(".txt")
         except OSError as err:
             logger.error(f"Unable to save transcription to {target_file}")
-            raise OSError("Failed to save transcription") from err

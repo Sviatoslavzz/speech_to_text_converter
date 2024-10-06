@@ -61,30 +61,30 @@ async def get_channel_videos_worker(link: str) -> tuple[bool, int, list[YouTubeV
     return True, amount, videos
 
 
-async def download_video_worker(videos: list[YouTubeVideo]) -> AsyncGenerator[tuple[bool, Path], None]:
+async def download_video_worker(videos: list[YouTubeVideo], chat_id:str) -> AsyncGenerator[tuple[bool, Path], None]:
     _, youtube_loader = get_clients()
     for video in videos:
-        result, path_ = await youtube_loader.download_video(video, required_height=480)
+        result, path_ = await youtube_loader.download_video(video=video, required_height=480, uid=chat_id)
         if result:
             yield result, path_
         else:
             yield False, video.link
 
 
-async def download_audio_worker(videos: list[YouTubeVideo]) -> AsyncGenerator[tuple[bool, Path], None]:
+async def download_audio_worker(videos: list[YouTubeVideo], chat_id:str) -> AsyncGenerator[tuple[bool, Path], None]:
     _, youtube_loader = get_clients()
     for video in videos:
-        result, path_ = await youtube_loader.download_audio(video)
+        result, path_ = await youtube_loader.download_audio(video=video, uid=chat_id)
         if result:
             yield result, path_
         else:
             yield False, video.link
 
 
-async def download_subtitles_worker(videos: list[YouTubeVideo]) -> AsyncGenerator[tuple[bool, Path | str], None]:
+async def download_subtitles_worker(videos: list[YouTubeVideo], chat_id:str) -> AsyncGenerator[tuple[bool, Path | str], None]:
     _, youtube_loader = get_clients()
     for video in videos:
-        result, path_ = await youtube_loader.get_captions(video)
+        result, path_ = await youtube_loader.get_captions(video=video, uid=chat_id)
         if result:
             yield result, path_
         else:

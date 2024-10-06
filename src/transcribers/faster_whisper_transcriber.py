@@ -34,7 +34,7 @@ class FasterWhisperTranscriber(AbstractTranscriber):
             logger.error(f"File format is not supported: {path.suffix}")
             raise NotImplementedError("File format is not supported")
         model = WhisperModel(**asdict(self.config))
-        logger.info("FasterWhisperTranscriber transcription started")
+        logger.info(f"{self.__repr__()} transcription started")
         segments, info = model.transcribe(path.__fspath__())
         logger.info(f"Detected language {info.language} with probability {info.language_probability}")
         result = ""
