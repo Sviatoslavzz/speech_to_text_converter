@@ -1,6 +1,6 @@
 [project]
 name = "youtube_loader_service"
-version = "1.1.0"
+version = "1.2.0"
 description = "service is capable of download audio/video/text by youtube video/channel link and transcribe in case transcript is missing"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
@@ -48,6 +48,7 @@ exclude = [
 
 [tool.ruff.lint]
 ignore = [
+    "RUF001", # String contains ambiguous char
     "ANN101", # Missing type annotation for `self` in method
     "ANN102", # Missing type annotation for `cls` in classmethod
     "ANN204", # Missing return type annotation for special method `__del__`

@@ -1,15 +1,14 @@
 import os
+import re
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any, AsyncGenerator
 
 from dotenv import load_dotenv
-import re
-
 from loguru import logger
 
 from objects import YouTubeVideo
-from youtube_workers.yt_dlp_loader import YouTubeLoader
 from youtube_workers.youtube_api import YouTubeClient
+from youtube_workers.yt_dlp_loader import YouTubeLoader
 
 SAVING_FOLDER = "saved_files"
 
@@ -42,7 +41,7 @@ def get_clients() -> tuple[YouTubeClient, YouTubeLoader]:
 
 
 async def convert_links_to_videos(links: str) -> AsyncGenerator[tuple[bool, str, YouTubeVideo | None], None]:
-    links = re.split(r'[ ,\n]+', links)
+    links = re.split(r"[ ,\n]+", links)
     youtube_client, _ = get_clients()
     for link in links:
         video = await youtube_client.get_video_by_link(link.strip())

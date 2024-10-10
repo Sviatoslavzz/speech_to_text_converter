@@ -63,5 +63,5 @@ class TranscriberWorker:
                 file.write(result)
             logger.info(f"Transcription saved\nwhere: {target_file}")
             return True, file_path.with_suffix(".txt")
-        except OSError as err:
+        except OSError:
             logger.error(f"Unable to save transcription to {target_file}")

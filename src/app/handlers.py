@@ -9,6 +9,13 @@ from google.api_core.exceptions import BadRequest
 from loguru import logger
 
 from app.keyboards import main_menu, options_menu
+from app.main_workers import (
+    convert_links_to_videos,
+    download_audio_worker,
+    download_subtitles_worker,
+    download_video_worker,
+    get_channel_videos_worker,
+)
 from app.replies import (
     choose_channel_button,
     choose_file_button,
@@ -22,8 +29,6 @@ from objects import DownloadOptions, UserRoute, YouTubeVideo
 from transcribers.abscract import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 from transcribers.worker import TranscriberWorker
-from app.main_workers import download_video_worker, download_audio_worker, download_subtitles_worker, \
-    convert_links_to_videos, get_channel_videos_worker
 
 # TODO добавление через config
 WHISPER_MODEL = "small"
@@ -87,7 +92,7 @@ async def video_handler_links(message: Message, state: FSMContext):
         if not result:
             await message.answer(f"Не нашел канал по данной ссылке{message.text.strip()} ❌")
         elif not amount:
-            await message.answer(f"Не нашел видео на данном канале ❌")
+            await message.answer("Не нашел видео на данном канале ❌")
         else:
             await message.answer(f"Нашел {amount} видео на канале ✅")
     elif user_state.get("option") == "video":

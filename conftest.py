@@ -14,7 +14,11 @@ SAVING_FOLDER = "saved_files"
 @pytest.fixture
 def get_env() -> dict[str, str]:
     load_dotenv()
-    return {"YOUTUBE_API": os.getenv("YOUTUBE_API")}
+    return {"YOUTUBE_API": os.getenv("YOUTUBE_API"),
+            "TOKEN": os.getenv("TOKEN"),
+            "DROPBOX_REFRESH_TOKEN": os.getenv("DROPBOX_REFRESH_TOKEN"),
+            "DROPBOX_APP_KEY": os.getenv("DROPBOX_APP_KEY"),
+            "DROPBOX_APP_SECRET": os.getenv("DROPBOX_APP_SECRET"), }
 
 
 @pytest.fixture
