@@ -4,10 +4,12 @@ export
 .PHONY: uninstall_all_dependencies
 
 run_bot:
+	@echo "Launching telegram bot app"
 	python3 src/bot.py
 
 run_cli:
-	python3 src/main.py
+	@echo "Launching cli mode"
+	python3 src/cli.py
 
 install:
 	pip install -e .[dev,test] -U
