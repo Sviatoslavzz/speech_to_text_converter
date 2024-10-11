@@ -1,10 +1,9 @@
-import os
+import multiprocessing
 import re
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
-from dotenv import load_dotenv
-from loguru import logger
+from objects import get_env, get_save_dir
 
 from objects import YouTubeVideo
 from youtube_workers.youtube_api import YouTubeClient
@@ -12,28 +11,15 @@ from youtube_workers.yt_dlp_loader import YouTubeLoader
 
 SAVING_FOLDER = "saved_files"
 
-
-def get_env() -> dict[str, str]:
-    load_dotenv()
-    return {"YOUTUBE_API": os.getenv("YOUTUBE_API")}
-
-
-def make_save_dir() -> Path:
-    absolute_path = Path(__file__).absolute().parent.parent.parent
-    dir_ = Path(f"{absolute_path}/{SAVING_FOLDER}")
-    if not dir_.is_dir():
-        dir_.mkdir()
-        logger.info(f"Saving directory created: {dir_}")
-    logger.info(f"Saving directory set up: {dir_}")
-    return dir_
-
+TRANSCRIBE_TASK_QUEUE: multiprocessing.Queue
+TRANSCRIBE_RESULT_QUEUE: multiprocessing.Queue
 
 def get_clients() -> tuple[YouTubeClient, YouTubeLoader]:
     youtube_client = YouTubeClient(get_env().get("YOUTUBE_API")) \
         if not YouTubeClient.get_instance() \
         else YouTubeClient.get_instance()
 
-    youtube_loader = YouTubeLoader(make_save_dir()) \
+    youtube_loader = YouTubeLoader(get_save_dir()) \
         if not YouTubeLoader.get_instance() \
         else YouTubeLoader.get_instance()
 
@@ -60,7 +46,7 @@ async def get_channel_videos_worker(link: str) -> tuple[bool, int, list[YouTubeV
     return True, amount, videos
 
 
-async def download_video_worker(videos: list[YouTubeVideo], chat_id:str) -> AsyncGenerator[tuple[bool, Path], None]:
+async def download_video_worker(videos: list[YouTubeVideo], chat_id: str) -> AsyncGenerator[tuple[bool, Path], None]:
     _, youtube_loader = get_clients()
     for video in videos:
         result, path_ = await youtube_loader.download_video(video=video, required_height=480, uid=chat_id)
@@ -70,7 +56,7 @@ async def download_video_worker(videos: list[YouTubeVideo], chat_id:str) -> Asyn
             yield False, video.link
 
 
-async def download_audio_worker(videos: list[YouTubeVideo], chat_id:str) -> AsyncGenerator[tuple[bool, Path], None]:
+async def download_audio_worker(videos: list[YouTubeVideo], chat_id: str) -> AsyncGenerator[tuple[bool, Path], None]:
     _, youtube_loader = get_clients()
     for video in videos:
         result, path_ = await youtube_loader.download_audio(video=video, uid=chat_id)
@@ -80,7 +66,8 @@ async def download_audio_worker(videos: list[YouTubeVideo], chat_id:str) -> Asyn
             yield False, video.link
 
 
-async def download_subtitles_worker(videos: list[YouTubeVideo], chat_id:str) -> AsyncGenerator[tuple[bool, Path | str], None]:
+async def download_subtitles_worker(videos: list[YouTubeVideo], chat_id: str) -> AsyncGenerator[
+    tuple[bool, Path | str], None]:
     _, youtube_loader = get_clients()
     for video in videos:
         result, path_ = await youtube_loader.get_captions(video=video, uid=chat_id)

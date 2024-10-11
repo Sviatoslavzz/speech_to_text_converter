@@ -1,19 +1,32 @@
 import os
 from dataclasses import dataclass
 from enum import Enum
-
+from loguru import logger
 from aiogram.fsm.state import State, StatesGroup
 from dotenv import load_dotenv
+from pathlib import Path
 
 MB = 1024 * 1024
+SAVING_FOLDER = "saved_files"
+
 
 def get_env() -> dict[str, str]:
     load_dotenv()
     return {"YOUTUBE_API": os.getenv("YOUTUBE_API"),
-            "TOKEN": os.getenv("TOKEN"),
+            "TG_TOKEN": os.getenv("TG_TOKEN"),
             "DROPBOX_REFRESH_TOKEN": os.getenv("DROPBOX_REFRESH_TOKEN"),
             "DROPBOX_APP_KEY": os.getenv("DROPBOX_APP_KEY"),
             "DROPBOX_APP_SECRET": os.getenv("DROPBOX_APP_SECRET"), }
+
+
+def get_save_dir() -> Path:
+    absolute_path = Path(__file__).absolute().parent.parent
+    dir_ = Path(f"{absolute_path}/{SAVING_FOLDER}")
+    if not dir_.is_dir():
+        dir_.mkdir()
+        logger.info(f"Saving directory created: {dir_}")
+    logger.info(f"Saving directory set up: {dir_}")
+    return dir_
 
 
 class DownloadOptions(Enum):
