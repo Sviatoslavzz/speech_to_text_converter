@@ -14,7 +14,7 @@ from app.main_workers import (
     download_audio_worker,
     download_subtitles_worker,
     download_video_worker,
-    get_channel_videos_worker,
+    get_channel_videos_worker, run_transcriber_executor,
 )
 from app.replies import (
     choose_channel_button,
@@ -26,14 +26,6 @@ from app.replies import (
     welcome_message,
 )
 from objects import DownloadOptions, UserRoute, YouTubeVideo, get_save_dir
-from transcribers.abscract import AbstractTranscriber
-from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
-from transcribers.worker import TranscriberWorker
-
-# TODO добавление через config
-WHISPER_MODEL = "small"
-
-TRANSCRIBER: type[AbstractTranscriber] = FasterWhisperTranscriber
 
 router = Router()
 
@@ -138,15 +130,16 @@ async def file_receiver(message: Message, state: FSMContext):
         logger.info(
             f"{message.from_user.username}:{message.chat.id} File loaded from tg and saved to\n{save_path}")
 
-        worker = TranscriberWorker()  # TODO убрать отсюда
-        result, path_ = await worker.transcribe(save_path)
-        save_path.unlink(missing_ok=True)
-        if result:
-            await message.answer_document(FSInputFile(path_))
-            logger.info(f"{message.chat.id} Text file sent")
-            path_.unlink(missing_ok=True)
-        else:
-            await message.answer("К сожалению, что-то пошло не так и я не смог сделать транскрипцию 😓")
+        transcribe_results = await run_transcriber_executor([save_path], message.chat.id, message.message_id)
+
+        for result, path_ in transcribe_results:
+            if result:
+                await message.answer_document(FSInputFile(path_))
+                logger.info(f"{message.chat.id} Text file sent")
+                save_path.unlink(missing_ok=True)
+                path_.unlink(missing_ok=True)
+            else:
+                await message.answer("К сожалению, что-то пошло не так и я не смог сделать транскрипцию 😓")
     except BadRequest:
         logger.error(f"{message.from_user.username}:{message.chat.id} Failed to load file from tg")
 

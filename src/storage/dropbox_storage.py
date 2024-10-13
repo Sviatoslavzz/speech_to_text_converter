@@ -47,6 +47,13 @@ class DropBox:
         return wrapper
 
     def _refresh_access_token(self):
+        """
+        Refreshes access token each 4 hours using
+        - refresh_token
+        - app key
+        - app secret
+        :return:
+        """
         if time.time() - self._token_timer > 4 * 55 * 60:
             try:
                 response = requests.post(url=self._auth_url,
@@ -145,13 +152,24 @@ class DropBox:
         return len(self._storage) == 0
 
     @_async_wrap
-    def list_files(self) -> list:
+    def list_dropbox_files(self) -> list[str]:
+        """
+        Get the list of actually loaded to DP files
+        :return: list of file names
+        """
         self._refresh_access_token()
         files = []
         result = self._client.files_list_folder("")
         for entry in result.entries:
             files.append(entry.name)
         return files
+
+    def list_storage_files(self) -> list[str]:
+        """
+        Get the list of stored files using only internal storage dict
+        :return: list of file names
+        """
+        return [file for file in self._storage]
 
     @_async_wrap
     def storage_space(self) -> float:
