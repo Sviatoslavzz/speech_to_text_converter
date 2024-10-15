@@ -8,7 +8,7 @@ from loguru import logger
 from objects import DownloadOptions, YouTubeVideo
 from transcribers.abscract import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
-from transcribers.worker import TranscriberWorker
+from transcribers.transcriber_worker import TranscriberWorker
 from youtube_workers.youtube_api import YouTubeClient
 from youtube_workers.yt_dlp_loader import YouTubeLoader
 

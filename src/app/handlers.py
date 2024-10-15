@@ -14,7 +14,8 @@ from app.main_workers import (
     download_audio_worker,
     download_subtitles_worker,
     download_video_worker,
-    get_channel_videos_worker, run_transcriber_executor,
+    get_channel_videos_worker,
+    run_transcriber_executor,
 )
 from app.replies import (
     choose_channel_button,
@@ -25,7 +26,7 @@ from app.replies import (
     provide_links,
     welcome_message,
 )
-from objects import DownloadOptions, UserRoute, YouTubeVideo, get_save_dir
+from objects import DownloadOptions, UserRoute, YouTubeVideo, get_save_dir, TranscriptionTask
 
 router = Router()
 
@@ -125,23 +126,26 @@ async def file_receiver(message: Message, state: FSMContext):
 
     try:
         file_info = await message.bot.get_file(file.file_id)
-        save_path = get_save_dir() / file.file_name
-        await message.bot.download_file(file_info.file_path, destination=save_path)
+        task = TranscriptionTask(origin_path=get_save_dir() / file.file_name,
+                                 id=f"{message.chat.id}{message.message_id}")
+        await message.bot.download_file(file_info.file_path, destination=task.origin_path)
         logger.info(
-            f"{message.from_user.username}:{message.chat.id} File loaded from tg and saved to\n{save_path}")
+            f"{message.from_user.username}:{message.chat.id} File loaded from tg and saved to\n{task.origin_path}")
 
-        transcribe_results = await run_transcriber_executor([save_path], message.chat.id, message.message_id)
+        result_tasks = await run_transcriber_executor([task])
 
-        for result, path_ in transcribe_results:
-            if result:
-                await message.answer_document(FSInputFile(path_))
+        for r_task in result_tasks:
+            if r_task.result:
+                await message.answer_document(FSInputFile(r_task.transcription_path))
                 logger.info(f"{message.chat.id} Text file sent")
-                save_path.unlink(missing_ok=True)
-                path_.unlink(missing_ok=True)
+                r_task.origin_path.unlink(missing_ok=True)
+                r_task.transcription_path.unlink(missing_ok=True)
             else:
-                await message.answer("К сожалению, что-то пошло не так и я не смог сделать транскрипцию 😓")
+                logger.debug(f"Transcription failed, got message {r_task.message.message["ru"]}")
+                await message.answer("К сожалению, что-то пошло не так и я не смог сделать транскрибацию 😓")
     except BadRequest:
         logger.error(f"{message.from_user.username}:{message.chat.id} Failed to load file from tg")
+        await message.answer("Упс, что-то пошло не так!")
 
 
 @router.callback_query(F.data == "download_video", UserRoute.option)

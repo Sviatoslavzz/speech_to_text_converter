@@ -1,14 +1,13 @@
 import asyncio
-import time
 from multiprocessing import get_context, Queue
 import re
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
-from objects import get_env, get_save_dir
+from objects import get_env, get_save_dir, TranscriptionTask
 
 from objects import YouTubeVideo
-from transcribers.worker import TranscriberWorker
+from transcribers.transcriber_worker import TranscriberWorker
 from youtube_workers.youtube_api import YouTubeClient
 from youtube_workers.yt_dlp_loader import YouTubeLoader
 from loguru import logger
@@ -26,12 +25,16 @@ def run_executor(task_queue: Queue, result_queue: Queue):
 async def async_executor(task_queue: Queue, result_queue: Queue):
     tr_worker = TranscriberWorker().get_instance()
     logger.debug(f"ENTERING LOOP")
+
+    async def process_transcribe(task_):
+        result = await tr_worker.transcribe(task_)
+        result_queue.put(result)
+
     while True:
         if not task_queue.empty():
             task = task_queue.get()
-            logger.debug(f"PROCESS GOT TASK {task}")
-            result, path_ = await tr_worker.transcribe(task[1])
-            result_queue.put((task[0], result, path_))
+            logger.debug(f"PROCESS GOT TASK {task.id}")
+            asyncio.create_task(process_transcribe(task))
 
         await asyncio.sleep(0.1)
 
@@ -104,36 +107,30 @@ async def download_subtitles_worker(videos: list[YouTubeVideo], chat_id: str) ->
             yield False, video.link
 
 
-async def run_transcriber_executor(local_files: list[Path], uid: int, mess_id: int) -> list[(bool, Path)]:
-    """
-    Runs a transcriber executor in a separate process
-    Passes local files for transcribing
-    :return: list of path to text files
-    """
+async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[TranscriptionTask]:
     if not TRANSCRIBER_WORKER.is_alive():
-        time.sleep(2)
+        await asyncio.sleep(2)
         TRANSCRIBER_WORKER.start()
-        logger.debug(f"TRANSCRIBER_WORKER started")
+        logger.debug(f"TRANSCRIBER_WORKER process started")
 
-    tasks = []
-    # need to form task ID to properly take it from Queue
-    for i in range(len(local_files)):
-        tasks.append(asyncio.create_task(submit_transcriber_task((f"{uid}{mess_id}{i}", local_files[i]))))
-    process_result = await asyncio.gather(*tasks)
+    async_tasks = []
+    for task in tasks:
+        async_tasks.append(asyncio.create_task(submit_transcriber_task(task)))
+    process_result = await asyncio.gather(*async_tasks)
 
     return [result for result in process_result]
 
 
-async def submit_transcriber_task(task):
+async def submit_transcriber_task(task: TranscriptionTask) -> TranscriptionTask:
     TRANSCRIBE_TASK_QUEUE.put(task)
-    logger.debug(f"TASK PUT {task}")
+    logger.debug(f"TASK PUT {task.id}")
     while True:
         if not TRANSCRIBE_RESULT_QUEUE.empty():
-            result_id, result, path_ = await asyncio.to_thread(TRANSCRIBE_RESULT_QUEUE.get,)
-            logger.debug(f"TASK GET {result_id}")
-            if task[0] == result_id:
-                return result, path_
+            result = await asyncio.to_thread(TRANSCRIBE_RESULT_QUEUE.get, )
+            logger.debug(f"TASK GET {result.id}")
+            if task.id == result.id:
+                return result
             else:
-                TRANSCRIBE_RESULT_QUEUE.put((result_id, result, path_))
+                TRANSCRIBE_RESULT_QUEUE.put(result)
 
         await asyncio.sleep(0.1)

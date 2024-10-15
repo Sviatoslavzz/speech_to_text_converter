@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
-from transcribers.worker import TranscriberWorker
+from transcribers.transcriber_worker import TranscriberWorker
 from youtube_workers.youtube_api import YouTubeClient
 from youtube_workers.yt_dlp_loader import YouTubeLoader
 
@@ -41,7 +41,7 @@ def youtube_loader(saving_path):
 
 @pytest.fixture
 def transcriber_worker():
-    return TranscriberWorker()
+    return TranscriberWorker().get_instance()
 
 
 @pytest.fixture

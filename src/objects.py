@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from loguru import logger
 from aiogram.fsm.state import State, StatesGroup
@@ -49,6 +49,22 @@ class YouTubeVideo:
     def generate_link(self) -> str:
         self.link = f"https://www.youtube.com/watch?v={self.id}"
         return self.link
+
+
+@dataclass(slots=True)
+class AppMessage:
+    message: dict[str, str]
+    available_languages: list[str] = field(default_factory=lambda: ["ru"])
+
+
+@dataclass(slots=True)
+class TranscriptionTask:
+    origin_path: Path
+    transcription_path: Path | None = None
+    result: bool | None = False
+    id: str | None = None
+    message: AppMessage | None = None
+    file_size: int | None = None
 
 
 class UserRoute(StatesGroup):
