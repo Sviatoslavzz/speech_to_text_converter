@@ -1,47 +1,15 @@
 import asyncio
-from multiprocessing import get_context, Queue
 import re
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
-from objects import get_env, get_save_dir, TranscriptionTask
-
-from objects import YouTubeVideo
-from transcribers.transcriber_worker import TranscriberWorker
+from objects import TranscriptionTask, YouTubeVideo, get_env, get_save_dir
+from process_executors.process_executor import ProcessExecutor
+from transcribers.transcriber_worker import transcriber_worker_as_target
 from youtube_workers.youtube_api import YouTubeClient
 from youtube_workers.yt_dlp_loader import YouTubeLoader
-from loguru import logger
 
 SAVING_FOLDER = "saved_files"
-CTX = get_context("spawn")
-TRANSCRIBE_TASK_QUEUE: Queue = CTX.Queue(maxsize=500)
-TRANSCRIBE_RESULT_QUEUE: Queue = CTX.Queue(maxsize=500)
-
-
-def run_executor(task_queue: Queue, result_queue: Queue):
-    asyncio.run(async_executor(task_queue, result_queue))
-
-
-async def async_executor(task_queue: Queue, result_queue: Queue):
-    tr_worker = TranscriberWorker().get_instance()
-    logger.debug(f"ENTERING LOOP")
-
-    async def process_transcribe(task_):
-        result = await tr_worker.transcribe(task_)
-        result_queue.put(result)
-
-    while True:
-        if not task_queue.empty():
-            task = task_queue.get()
-            logger.debug(f"PROCESS GOT TASK {task.id}")
-            asyncio.create_task(process_transcribe(task))
-
-        await asyncio.sleep(0.1)
-
-
-TRANSCRIBER_WORKER = CTX.Process(target=run_executor,
-                                 args=(TRANSCRIBE_TASK_QUEUE, TRANSCRIBE_RESULT_QUEUE),
-                                 name="python_transcriber")
 
 
 def get_clients() -> tuple[YouTubeClient, YouTubeLoader]:
@@ -96,8 +64,8 @@ async def download_audio_worker(videos: list[YouTubeVideo], chat_id: str) -> Asy
             yield False, video.link
 
 
-async def download_subtitles_worker(videos: list[YouTubeVideo], chat_id: str) -> AsyncGenerator[
-    tuple[bool, Path | str], None]:
+async def download_subtitles_worker(videos: list[YouTubeVideo],
+                                    chat_id: str) -> AsyncGenerator[tuple[bool, Path | str], None]:
     _, youtube_loader = get_clients()
     for video in videos:
         result, path_ = await youtube_loader.get_captions(video=video, uid=chat_id)
@@ -108,29 +76,26 @@ async def download_subtitles_worker(videos: list[YouTubeVideo], chat_id: str) ->
 
 
 async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[TranscriptionTask]:
-    if not TRANSCRIBER_WORKER.is_alive():
-        await asyncio.sleep(2)
-        TRANSCRIBER_WORKER.start()
-        logger.debug(f"TRANSCRIBER_WORKER process started")
+    executor = ProcessExecutor.get_instance(transcriber_worker_as_target)
+    if not executor.is_alive():
+        executor.configure(process_name="python_transcriber_worker")
+        executor.set_name("transcriber_worker")
+        executor.start()
+
+    async def submit_task(task_: TranscriptionTask) -> TranscriptionTask:
+        executor.put_task(task_)
+        while True:
+            result = await asyncio.to_thread(executor.get_result)
+            if result:
+                if task_.id == result.id:
+                    return result
+                executor.put_result(result)
+
+            await asyncio.sleep(0.1)
 
     async_tasks = []
     for task in tasks:
-        async_tasks.append(asyncio.create_task(submit_transcriber_task(task)))
+        async_tasks.append(asyncio.create_task(submit_task(task)))
     process_result = await asyncio.gather(*async_tasks)
 
     return [result for result in process_result]
-
-
-async def submit_transcriber_task(task: TranscriptionTask) -> TranscriptionTask:
-    TRANSCRIBE_TASK_QUEUE.put(task)
-    logger.debug(f"TASK PUT {task.id}")
-    while True:
-        if not TRANSCRIBE_RESULT_QUEUE.empty():
-            result = await asyncio.to_thread(TRANSCRIBE_RESULT_QUEUE.get, )
-            logger.debug(f"TASK GET {result.id}")
-            if task.id == result.id:
-                return result
-            else:
-                TRANSCRIBE_RESULT_QUEUE.put(result)
-
-        await asyncio.sleep(0.1)

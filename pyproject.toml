@@ -1,6 +1,6 @@
 [project]
 name = "youtube_loader_service"
-version = "1.2.0"
+version = "1.3.0"
 description = "service is capable of download audio/video/text by youtube video/channel link and transcribe in case transcript is missing"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
@@ -17,7 +17,8 @@ dependencies = [
     "aiohttp",
     "typeguard<5",
     "aiogram<14",
-    "dropbox==12.0.2"
+    "dropbox==12.0.2",
+    "setproctitle~=1.3"
 ]
 requires-python = ">=3.12"
 

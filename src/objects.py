@@ -1,10 +1,11 @@
 import os
 from dataclasses import dataclass, field
 from enum import Enum
-from loguru import logger
+from pathlib import Path
+
 from aiogram.fsm.state import State, StatesGroup
 from dotenv import load_dotenv
-from pathlib import Path
+from loguru import logger
 
 MB = 1024 * 1024
 SAVING_FOLDER = "saved_files"

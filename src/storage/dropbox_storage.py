@@ -1,16 +1,16 @@
-import time
-from pathlib import Path
 import asyncio
+import time
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from functools import wraps
+from pathlib import Path
+from typing import Any
 
 import dropbox
 import requests
 from dropbox.exceptions import ApiError
 from dropbox.files import CommitInfo, DeleteError, UploadSessionCursor
 from loguru import logger
-from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
-from typing import Any
-from functools import wraps
 
 from objects import MB, get_env
 
@@ -106,8 +106,7 @@ class DropBox:
             shared_links = self._client.sharing_list_shared_links(f"/{local_path.name}")
             if shared_links.links:
                 return shared_links.links[0].url
-            else:
-                logger.error(f"File already in appkey:{self._app_key} but link is unavailable")
+            logger.error(f"File already in appkey:{self._app_key} but link is unavailable")
 
         except Exception as e:
             logger.error(f"An exception occurred uploading to appkey:{self._app_key}, {local_path.name} {e.__repr__()}")

@@ -68,7 +68,7 @@ class TranscriberWorker:
 
         try:
             result = self.transcriber.transcribe(path=task.origin_path)
-        except NotImplementedError as e:
+        except NotImplementedError:
             task.result = False
             task.message.available_languages.append("en")
             task.message.message = {"ru": "Неверное расширение файла",
@@ -88,3 +88,8 @@ class TranscriberWorker:
             task.message.message = {"ru": "Не получилось сохранить транскрипцию"}
 
         return task
+
+
+async def transcriber_worker_as_target(task: TranscriptionTask) -> TranscriptionTask:
+    worker = TranscriberWorker.get_instance()
+    return await worker.transcribe(task)

@@ -26,7 +26,7 @@ from app.replies import (
     provide_links,
     welcome_message,
 )
-from objects import DownloadOptions, UserRoute, YouTubeVideo, get_save_dir, TranscriptionTask
+from objects import DownloadOptions, TranscriptionTask, UserRoute, YouTubeVideo, get_save_dir
 
 router = Router()
 
