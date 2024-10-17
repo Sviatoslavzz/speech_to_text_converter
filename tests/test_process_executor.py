@@ -26,8 +26,18 @@ def test_init():
     assert executor.get_q_size() == 333
 
 
+def test_reinit_wrong():
+    executor = ProcessExecutor(sync_example, a=5, b="5")
+    executor.configure(process_name="test")
+    executor_2 = ProcessExecutor(async_example, a=5, b="5")  # this call does not change the attributes
+
+    assert executor is executor_2
+    assert "test" in executor_2.__str__()
+
+
 def test_launch():
-    executor = ProcessExecutor(async_example, b="5")
+    executor = ProcessExecutor.get_instance(async_example, b="5")
+    executor.reinitialize(async_example, b="5")
     executor.start()
 
     executor.put_task(1)
@@ -39,7 +49,7 @@ def test_launch():
 
 
 def test_alive():
-    executor = ProcessExecutor(async_example, b="5")
+    executor = ProcessExecutor.get_instance(async_example, b="5")
     executor.configure(q_size=30, context="spawn", process_name="python_test_process")
     executor.start()
     executor.put_task(5)
@@ -58,6 +68,7 @@ async def task_generator(task: int):
 @pytest.mark.asyncio
 async def test_parallel_tasks():
     executor = ProcessExecutor.get_instance(async_example, b="5")
+    executor.reinitialize(async_example, b="5")
     executor.configure(q_size=30, context="spawn", process_name="python_test_process")
     executor.start()
 
@@ -82,7 +93,8 @@ async def test_parallel_tasks():
 
 @pytest.mark.asyncio
 async def test_sync_target():
-    executor = ProcessExecutor(sync_example, b="5")
+    executor = ProcessExecutor.get_instance(sync_example, b="5")
+    executor.reinitialize(sync_example, b="5")
     executor.configure(q_size=30, context="spawn", process_name="python_test_process")
     executor.start()
 
@@ -103,6 +115,7 @@ async def test_sync_target():
     assert not executor.is_alive()
 
 
+@pytest.mark.skip(reason="Uses only get_instance, it won't create new instance, only separate run")
 @pytest.mark.asyncio
 async def test_e2e_with_transcriber(saving_path, files):
     """
@@ -121,4 +134,39 @@ async def test_e2e_with_transcriber(saving_path, files):
 
     executor = ProcessExecutor.get_instance()
     executor.stop()
+    assert not executor.is_alive()
+
+
+def test_relaunching():
+    executor = ProcessExecutor.get_instance(async_example, b="test")
+    executor.reinitialize(async_example, b="test")
+    executor.configure(q_size=30, process_name="test_1")
+    executor.start()
+
+    executor.put_task(1)
+    executor.put_task(2)
+
+    while executor.n_tasks_running():
+        if not executor.is_result_queue_empty():
+            assert executor.get_result() in [2, 4]
+
+    executor.stop()
+
+    assert not executor.is_alive()
+
+    sleep(1)
+
+    executor.reinitialize(sync_example, b="test")
+    executor.configure(q_size=40, process_name="test_2")
+    executor.start()
+
+    executor.put_task(1)
+    executor.put_task(2)
+
+    while executor.n_tasks_running():
+        if not executor.is_result_queue_empty():
+            assert executor.get_result() in [2, 4]
+
+    executor.stop()
+
     assert not executor.is_alive()

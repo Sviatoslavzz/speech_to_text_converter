@@ -11,19 +11,31 @@ from process_executors.abstract import AbstractExecutor
 
 class ProcessExecutor(AbstractExecutor):
     _instance = None
+    _allow_reinit = False
     _context = "spawn"
 
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._allow_reinit = True
+            cls._instance = super(ProcessExecutor, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, target: Callable, *target_args, **target_kwargs):
-        logger.info(f"{self.__class__.__name__} initializing...")
-        self._process_name = None
-        self._task_queue = None
-        self._result_queue = None
-        self._worker = None
-        self._tasks_running = 0
-        super().__init__(target, *target_args, **target_kwargs)
+        if self._allow_reinit:
+            logger.info(f"{self.__class__.__name__} initializing...")
+            self._process_name = None
+            self._task_queue = None
+            self._result_queue = None
+            self._worker = None
+            self._tasks_running = 0
+            super().__init__(target, *target_args, **target_kwargs)
+            self._allow_reinit = False
 
     @classmethod
     def get_instance(cls, *args, **kwargs):
+        """
+        Returns an instance of the ProcessExecutor class if exists, otherwise creates one
+        """
         if cls._instance is None:
             cls._instance = cls(*args, **kwargs)
         return cls._instance
@@ -42,7 +54,7 @@ class ProcessExecutor(AbstractExecutor):
     def put_task(self, task: Any) -> Any:
         self._tasks_running += 1
         self._task_queue.put(task)
-        logger.info(f"{self.__class__.__name__} {self._name} has {self._tasks_running} tasks in operations")
+        logger.info(f"{self.__class__.__name__} {self._name} has {self._tasks_running} tasks in operation")
 
     def put_result(self, task: Any) -> Any:
         self._tasks_running += 1
@@ -51,7 +63,7 @@ class ProcessExecutor(AbstractExecutor):
     def get_result(self) -> Any:
         if not self._result_queue.empty():
             self._tasks_running -= 1
-            logger.info(f"{self.__class__.__name__} {self._name} has {self._tasks_running} tasks in operations")
+            logger.info(f"{self.__class__.__name__} {self._name} has {self._tasks_running} tasks in operation")
             return self._result_queue.get()
 
     def is_alive(self):
@@ -87,11 +99,22 @@ class ProcessExecutor(AbstractExecutor):
         while self.is_alive():
             self._worker.terminate()
             self._worker.join()
-        self._instance = None
         logger.info(f"{self.__class__.__name__} {self._name} stopped")
+
+    def reinitialize(self, target: Callable, *args, **kwargs):
+        self._allow_reinit = True
+        self.__init__(target, *args, **kwargs)
 
     def n_tasks_running(self) -> int:
         return self._tasks_running
 
+    def __str__(self):
+        cls_ = f"class: {self.__class__.__name__}, "
+        name_ = f"name: {self._name}, "
+        proc_name = f"process_name: {self._process_name}, "
+        qs = f"q_size: {self._q_size}, "
+        cxt = f"context: {self._context}"
+        return cls_ + name_ + proc_name + qs + cxt
+
     def __repr__(self):
-        return f"{self.__class__.__name__} {self._name} (q_size: {self._q_size}, context: {self._context})"
+        return f"{self.__class__.__name__} (q_size: {self._q_size}, context: {self._context})"
