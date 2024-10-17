@@ -23,10 +23,10 @@ class TranscriberWorker:
         return cls._instance
 
     def __init__(self):
+        logger.info(f"{self.__class__.__name__} initializing...")
         self.transcriber = self._TRANSCRIBER(model=self._WHISPER_MODEL)
         self.semaphore = asyncio.Semaphore(4)  # TODO config
         self.pool = ThreadPoolExecutor(max_workers=4)
-        logger.info("TranscriberWorker initialized")
 
     @classmethod
     def get_instance(cls):
@@ -67,7 +67,7 @@ class TranscriberWorker:
             return task
 
         try:
-            result = self.transcriber.transcribe(path=task.origin_path)
+            transcription = self.transcriber.transcribe(path=task.origin_path)
         except NotImplementedError:
             task.result = False
             task.message.available_languages.append("en")
@@ -79,9 +79,10 @@ class TranscriberWorker:
 
         try:
             with task.transcription_path.open(mode="w") as file:
-                file.write(result)
+                file.write(transcription)
             logger.info(f"Transcription saved\nwhere: {task.transcription_path}")
             task.result = True
+            task.file_size = task.transcription_path.stat().st_size
         except OSError:
             logger.error(f"Unable to save transcription to {task.transcription_path}")
             task.result = False

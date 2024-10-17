@@ -9,8 +9,6 @@ from transcribers.transcriber_worker import transcriber_worker_as_target
 from youtube_workers.youtube_api import YouTubeClient
 from youtube_workers.yt_dlp_loader import YouTubeLoader
 
-SAVING_FOLDER = "saved_files"
-
 
 def get_clients() -> tuple[YouTubeClient, YouTubeLoader]:
     youtube_client = YouTubeClient(get_env().get("YOUTUBE_API")) \
@@ -76,6 +74,12 @@ async def download_subtitles_worker(videos: list[YouTubeVideo],
 
 
 async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[TranscriptionTask]:
+    """
+    Runs transcriber in a separate process,
+    puts transcription tasks to process Queue,
+    and asynchronously wait for results
+    Returns: list of TranscriptionTask
+    """
     executor = ProcessExecutor.get_instance(transcriber_worker_as_target)
     if not executor.is_alive():
         executor.configure(process_name="python_transcriber_worker")

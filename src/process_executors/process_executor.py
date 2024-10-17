@@ -14,13 +14,13 @@ class ProcessExecutor(AbstractExecutor):
     _context = "spawn"
 
     def __init__(self, target: Callable, *target_args, **target_kwargs):
-        super().__init__(target, *target_args, **target_kwargs)
+        logger.info(f"{self.__class__.__name__} initializing...")
         self._process_name = None
         self._task_queue = None
         self._result_queue = None
         self._worker = None
         self._tasks_running = 0
-        logger.info(f"ProcessExecutor {self._process_name or ""} initialized")
+        super().__init__(target, *target_args, **target_kwargs)
 
     @classmethod
     def get_instance(cls, *args, **kwargs):
@@ -42,17 +42,16 @@ class ProcessExecutor(AbstractExecutor):
     def put_task(self, task: Any) -> Any:
         self._tasks_running += 1
         self._task_queue.put(task)
-        logger.debug(f"TASK PUT {task}")
+        logger.info(f"{self.__class__.__name__} {self._name} has {self._tasks_running} tasks in operations")
 
     def put_result(self, task: Any) -> Any:
         self._tasks_running += 1
         self._result_queue.put(task)
-        logger.debug(f"TASK PUT BACK {task}")
 
     def get_result(self) -> Any:
         if not self._result_queue.empty():
             self._tasks_running -= 1
-            logger.debug("GETTING TASK FROM QUEUE")
+            logger.info(f"{self.__class__.__name__} {self._name} has {self._tasks_running} tasks in operations")
             return self._result_queue.get()
 
     def is_alive(self):
@@ -67,25 +66,32 @@ class ProcessExecutor(AbstractExecutor):
                                                               args=(self._task_queue, self._result_queue))
 
             self._worker.start()
-            logger.info(f"Process executor {self._name} (q_size: {self._q_size}, context: {self._context}) started")
+            logger.info(
+                f"{self.__class__.__name__} {self._name} q_size={self._q_size}, context={self._context} started")
+            return
+        logger.warning(f"{self.__class__.__name__} {self._name} already running")
 
     def _run_target(self, task_queue, result_queue):
         if self._process_name:
             setproctitle(self._process_name)
         if asyncio.iscoroutinefunction(self._target):
+            logger.info(f"Found coroutine target {self._target.__name__}")
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(self._run_async_target(task_queue, result_queue))
         else:
+            logger.info(f"Found target {self._target.__name__}")
             self._run_sync_target(task_queue, result_queue)
 
     def stop(self):
         while self.is_alive():
             self._worker.terminate()
             self._worker.join()
+        self._instance = None
+        logger.info(f"{self.__class__.__name__} {self._name} stopped")
 
     def n_tasks_running(self) -> int:
         return self._tasks_running
 
     def __repr__(self):
-        return f"Process executor {self._name} (q_size: {self._q_size}, context: {self._context})"
+        return f"{self.__class__.__name__} {self._name} (q_size: {self._q_size}, context: {self._context})"
