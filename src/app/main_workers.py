@@ -82,7 +82,7 @@ async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[Trans
     """
     executor = ProcessExecutor.get_instance(transcriber_worker_as_target)
     if not executor.is_alive():
-        executor.configure(process_name="python_transcriber_worker")
+        executor.configure(q_size=300, context="spawn", process_name="python_transcriber_worker")
         executor.set_name("transcriber_worker")
         executor.start()
 

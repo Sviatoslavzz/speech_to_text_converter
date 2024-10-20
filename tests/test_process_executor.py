@@ -150,13 +150,8 @@ def test_relaunching():
         if not executor.is_result_queue_empty():
             assert executor.get_result() in [2, 4]
 
-    executor.stop()
-
-    assert not executor.is_alive()
-
-    sleep(1)
-
     executor.reinitialize(sync_example, b="test")
+    assert not executor.is_alive()
     executor.configure(q_size=40, process_name="test_2")
     executor.start()
 

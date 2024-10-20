@@ -7,6 +7,8 @@ from aiogram.fsm.state import State, StatesGroup
 from dotenv import load_dotenv
 from loguru import logger
 
+MINUTE = 60
+HOUR = MINUTE * 60
 MB = 1024 * 1024
 SAVING_FOLDER = "saved_files"
 

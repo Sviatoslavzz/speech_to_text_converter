@@ -53,8 +53,8 @@ class ProcessExecutor(AbstractExecutor):
 
     def put_task(self, task: Any) -> Any:
         self._tasks_running += 1
-        self._task_queue.put(task)
         logger.info(f"{self.__class__.__name__} {self._name} has {self._tasks_running} tasks in operation")
+        self._task_queue.put(task)
 
     def put_result(self, task: Any) -> Any:
         self._tasks_running += 1
@@ -67,7 +67,7 @@ class ProcessExecutor(AbstractExecutor):
             return self._result_queue.get()
 
     def is_alive(self):
-        return self._worker and self._worker.is_alive()
+        return bool(self._worker) and self._worker.is_alive()
 
     def start(self):
         if not self.is_alive():
@@ -102,6 +102,8 @@ class ProcessExecutor(AbstractExecutor):
         logger.info(f"{self.__class__.__name__} {self._name} stopped")
 
     def reinitialize(self, target: Callable, *args, **kwargs):
+        if self.is_alive():
+            self.stop()
         self._allow_reinit = True
         self.__init__(target, *args, **kwargs)
 
@@ -109,12 +111,12 @@ class ProcessExecutor(AbstractExecutor):
         return self._tasks_running
 
     def __str__(self):
-        cls_ = f"class: {self.__class__.__name__}, "
-        name_ = f"name: {self._name}, "
-        proc_name = f"process_name: {self._process_name}, "
-        qs = f"q_size: {self._q_size}, "
+        cls_ = f"class: {self.__class__.__name__}"
+        name_ = f"name: {self._name}"
+        proc_name = f"process_name: {self._process_name}"
+        qs = f"q_size: {self._q_size}"
         cxt = f"context: {self._context}"
-        return cls_ + name_ + proc_name + qs + cxt
+        return f"{cls_}, {name_}, {proc_name}, {qs}, {cxt}"
 
     def __repr__(self):
         return f"{self.__class__.__name__} (q_size: {self._q_size}, context: {self._context})"

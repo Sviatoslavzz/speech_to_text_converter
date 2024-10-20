@@ -12,7 +12,8 @@ from dropbox.exceptions import ApiError
 from dropbox.files import CommitInfo, DeleteError, UploadSessionCursor
 from loguru import logger
 
-from objects import MB, get_env
+from objects import MB, get_env, HOUR, MINUTE
+
 
 
 class DropBox:
@@ -22,7 +23,7 @@ class DropBox:
     """
     _auth_url = "https://api.dropbox.com/oauth2/token"
 
-    def __init__(self, storage_time: float = 1800):
+    def __init__(self, storage_time: float = 30 * MINUTE):
         self._client: dropbox.Dropbox
         self._token: str
         self._token_timer: float = 0
@@ -54,7 +55,7 @@ class DropBox:
         - app secret
         :return:
         """
-        if time.time() - self._token_timer > 4 * 55 * 60:
+        if time.time() - self._token_timer > (3 * HOUR + 50 * MINUTE):
             try:
                 response = requests.post(url=self._auth_url,
                                          data={
