@@ -1,6 +1,6 @@
 [project]
 name = "youtube_loader_service"
-version = "1.3.0"
+version = "1.3.1"
 description = "service is capable of download audio/video/text by youtube video/channel link and transcribe in case transcript is missing"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
@@ -59,6 +59,10 @@ ignore = [
     "ANN003", # Missing type annotation for `**kwargs`
     "ANN002", # Missing type annotation for `*args`
     "ANN001", # Missing type annotation for function argument `self`
+    "ANN206", # Missing return type annotation for classmethod
+    "ANN201", # Missing return type annotation for public function
+    "ANN202", # Missing return type annotation for private function
+    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
 ]
 
 extend-select = [
@@ -93,7 +97,7 @@ extend-select = [
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "ANN001", "ANN201"]
+"tests/*" = ["S101", "ANN001", "ANN201", "PLR2004"]
 "conftest.py" = ["S101", "ANN001", "ANN201"]
 
 [build-system]

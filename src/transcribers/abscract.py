@@ -27,3 +27,7 @@ class AbstractTranscriber(ABC):
     @abstractmethod
     def transcribe(self, path: Path) -> str:
         pass
+
+    @abstractmethod
+    def __repr__(self):
+        pass

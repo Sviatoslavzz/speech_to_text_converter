@@ -38,7 +38,7 @@ class TranscriberWorker:
     @staticmethod
     def _async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        async def wrapper(self, *args, **kwargs):  # noqa ANN202
+        async def wrapper(self, *args, **kwargs):  # ANN202
             async with self.semaphore:
                 loop = asyncio.get_running_loop()
                 return await loop.run_in_executor(self.pool, lambda: func(self, *args, **kwargs))

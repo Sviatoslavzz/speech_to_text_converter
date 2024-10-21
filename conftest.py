@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
+from executors.process_executor import ProcessExecutor
 from transcribers.transcriber_worker import TranscriberWorker
 from youtube_workers.youtube_api import YouTubeClient
 from youtube_workers.yt_dlp_loader import YouTubeLoader
@@ -39,9 +40,24 @@ def youtube_api_client(get_env):
 def youtube_loader(saving_path):
     return YouTubeLoader(saving_path)
 
+
 @pytest.fixture
 def transcriber_worker():
     return TranscriberWorker().get_instance()
+
+
+@pytest.fixture
+def process_executor(request):
+    target = request.param["target"]
+    args = request.param.get("args", [])
+    kwargs = request.param.get("kwargs", {})
+
+    executor = ProcessExecutor.get_instance()
+    if not executor:
+        executor = ProcessExecutor(target, *args, **kwargs)
+    else:
+        executor.reinitialize(target, *args, **kwargs)
+    return executor
 
 
 @pytest.fixture
@@ -113,6 +129,7 @@ def youtube_music() -> list[str]:
         "https://www.youtube.com/watch?v=KeaRIJd8Z5E&t=4s",
     ]
 
+
 @pytest.fixture
 def videos_without_subtitles() -> list[str]:
     return [
@@ -120,6 +137,7 @@ def videos_without_subtitles() -> list[str]:
         "https://www.youtube.com/shorts/Sgfc-5C_76k",
         "https://www.youtube.com/shorts/dNTo51QSO6g",
     ]
+
 
 @pytest.fixture
 def files():

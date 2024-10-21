@@ -42,3 +42,6 @@ class FasterWhisperTranscriber(AbstractTranscriber):
             result += segment.text  # TODO а что если сразу в файл писать а не в оперативу?
 
         return result
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}, model {self.config.model_size_or_path}"

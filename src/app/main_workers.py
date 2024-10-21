@@ -3,8 +3,8 @@ import re
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
+from executors.process_executor import ProcessExecutor
 from objects import TranscriptionTask, YouTubeVideo, get_env, get_save_dir
-from process_executors.process_executor import ProcessExecutor
 from transcribers.transcriber_worker import transcriber_worker_as_target
 from youtube_workers.youtube_api import YouTubeClient
 from youtube_workers.yt_dlp_loader import YouTubeLoader
@@ -80,8 +80,9 @@ async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[Trans
     and asynchronously wait for results
     Returns: list of TranscriptionTask
     """
-    executor = ProcessExecutor.get_instance(transcriber_worker_as_target)
-    if not executor.is_alive():
+    executor = ProcessExecutor.get_instance()
+    if not executor:
+        executor = ProcessExecutor(transcriber_worker_as_target)
         executor.configure(q_size=300, context="spawn", process_name="python_transcriber_worker")
         executor.set_name("transcriber_worker")
         executor.start()
@@ -97,9 +98,7 @@ async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[Trans
 
             await asyncio.sleep(0.1)
 
-    async_tasks = []
-    for task in tasks:
-        async_tasks.append(asyncio.create_task(submit_task(task)))
+    async_tasks = [asyncio.create_task(submit_task(task)) for task in tasks]
     process_result = await asyncio.gather(*async_tasks)
 
-    return [result for result in process_result]
+    return list(process_result)

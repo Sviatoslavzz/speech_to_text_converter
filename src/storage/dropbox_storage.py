@@ -12,8 +12,7 @@ from dropbox.exceptions import ApiError
 from dropbox.files import CommitInfo, DeleteError, UploadSessionCursor
 from loguru import logger
 
-from objects import MB, get_env, HOUR, MINUTE
-
+from objects import HOUR, MB, MINUTE, get_env
 
 
 class DropBox:
@@ -40,7 +39,7 @@ class DropBox:
     @staticmethod
     def _async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        async def wrapper(self, *args, **kwargs):  # noqa ANN202
+        async def wrapper(self, *args, **kwargs):  # ANN202
             async with self.semaphore:
                 loop = asyncio.get_running_loop()
                 return await loop.run_in_executor(self.pool, lambda: func(self, *args, **kwargs))
@@ -158,18 +157,15 @@ class DropBox:
         :return: list of file names
         """
         self._refresh_access_token()
-        files = []
         result = self._client.files_list_folder("")
-        for entry in result.entries:
-            files.append(entry.name)
-        return files
+        return [entry.name for entry in result.entries]
 
     def list_storage_files(self) -> list[str]:
         """
         Get the list of stored files using only internal storage dict
         :return: list of file names
         """
-        return [file for file in self._storage]
+        return list(self._storage)
 
     @_async_wrap
     def storage_space(self) -> float:
