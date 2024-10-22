@@ -7,7 +7,7 @@ from typing import Any
 from loguru import logger
 
 from objects import TranscriptionTask
-from transcribers.abscract import AbstractTranscriber
+from transcribers.abscract_transcriber import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 
 

@@ -10,7 +10,7 @@ import yt_dlp
 from loguru import logger
 from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled, YouTubeTranscriptApi
 
-from objects import YouTubeVideo
+from objects import YouTubeVideo, DownloadTask
 
 
 class YouTubeLoader:
@@ -99,45 +99,35 @@ class YouTubeLoader:
             return False, Path()
 
     @_async_wrap
-    def download_video(
-            self,
-            video: YouTubeVideo,
-            required_ext: str = "mp4",
-            required_height: int | None = 720,
-            fps_limit: int = 30,
-            uid: str = ""
-    ) -> (bool, Path):
+    def download_video(self, task: DownloadTask) -> DownloadTask:
         """
         Downloads video from the YouTube video.
-        :param video: YouTubeVideo instance with the checked video meta
-        :param required_ext: required video format (like mp4 or webm)
-        :param required_height: required quality
-        :param fps_limit: 30 or 60
-        :param uid: unique id
-        :return: tuple(bool, Path)
+        :param task: DownloadTask
+        :return: DownloadTask
         """
-        video.generate_link()
 
-        title = f"{uid}_{self.prepare_title(video.title)}"
+        title = f"{task.id}_{self.prepare_title(task.video.title)}"
         config = copy.deepcopy(self.__config)
         config["outtmpl"] = f"{self.dir}/{title}.%(ext)s"
         config["format"] = (
-            f"bestvideo[height<={required_height}][ext={required_ext}][fps<={fps_limit}]+bestaudio[ext=m4a]/worst"
+            f"bestvideo[height<={task.options.height}][ext={task.options.extension}][fps<={task.options.fps}]+bestaudio[ext=m4a]/worst"
         )
 
         try:
             with yt_dlp.YoutubeDL(config) as ydl:
-                ydl.download([video.link])
-                logger.info(f"{uid} Video downloaded to {self.dir}/{title}.{required_ext}")
+                ydl.download([task.video.link])
+                logger.info(f"{task.id} Video downloaded to {self.dir}/{title}.{task.options.extension}")
+                task.local_path = Path(f"{self.dir}/{title}.{task.options.extension}")
+                task.file_size = task.local_path.stat().st_size
+                task.result = True
+                return task
 
-                return True, Path(f"{self.dir}/{title}.{required_ext}")
-
-        except yt_dlp.utils.DownloadError:
-            logger.error(f"{uid} Exception during video download for video id: {video.id}")
         except Exception as e:
-            logger.error(f"{uid} Exception during video download for video id: {video.id}, {e.__repr__()}")
+            logger.error(f"{task.id} Exception during video download for video id: {task.video.id}, {e.__repr__()}")
 
-        return False, Path()
+        task.message.message["ru"] = "Произошла ошибка при скачивании видео файла"
+        task.result = False
+        return task
 
     @_async_wrap
     def get_captions(self, video: YouTubeVideo, preferred_language: str | None = "ru", uid: str = "") -> (bool, Path):

@@ -26,7 +26,8 @@ from app.replies import (
     provide_links,
     welcome_message,
 )
-from objects import DownloadOptions, TranscriptionTask, UserRoute, YouTubeVideo, get_save_dir
+from objects import DownloadOptions, TranscriptionTask, UserRoute, YouTubeVideo, get_save_dir, DownloadTask, \
+    VideoOptions
 
 router = Router()
 
@@ -157,13 +158,27 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer("Принято в работу!")
 
-    async for result, path_ in download_video_worker(user_state.get("videos"), str(callback.message.chat.id)):
-        if result:
-            await callback.message.answer_document(FSInputFile(Path(path_)))
-            logger.info(f"{callback.message.chat.id} Video file sent")
-            path_.unlink(missing_ok=True)
+    coroutines = [asyncio.create_task(download_video_worker(DownloadTask(
+        video=video,
+        id=f"{callback.message.chat.id}{callback.message.message_id}",
+        options=VideoOptions(),
+    )) for video in user_state.get("video"))]
+
+    for complete_task in asyncio.as_completed(coroutines):
+        result_task: DownloadTask = await complete_task
+
+        if result_task.result:
+            if result_task.storage_link:
+                await callback.message.answer(result_task.message.message["ru"])
+                await callback.message.answer(result_task.storage_link)
+                logger.info(f"{callback.message.chat.id} Link to video file sent")
+            else:
+                await callback.message.answer_document(FSInputFile(path=Path(result_task.local_path),
+                                                                   filename=result_task.video.title))
+                logger.info(f"{callback.message.chat.id} Video file sent")
+                result_task.local_path.unlink(missing_ok=True)
         else:
-            await callback.message.answer(f"Не смог скачать видео по ссылке: {path_}")
+            await callback.message.answer(f"Не смог скачать видео по ссылке: {result_task.video.link}")
 
 
 @router.callback_query(F.data == "download_audio", UserRoute.option)

@@ -23,11 +23,12 @@ class DropBox:
     _auth_url = "https://api.dropbox.com/oauth2/token"
 
     def __init__(self, storage_time: float = 30 * MINUTE):
-        self._client: dropbox.Dropbox
-        self._token: str
+        self._client: dropbox.Dropbox | None = None
+        self._token: str | None = None
         self._token_timer: float = 0
         self._storage: dict[str, float] = {}
         self._storage_time = storage_time
+        self._connected = False
 
         self._refresh_token = get_env().get("DROPBOX_REFRESH_TOKEN")
         self._app_key = get_env().get("DROPBOX_APP_KEY")
@@ -52,9 +53,8 @@ class DropBox:
         - refresh_token
         - app key
         - app secret
-        :return:
         """
-        if time.time() - self._token_timer > (3 * HOUR + 50 * MINUTE):
+        if time.time() - self._token_timer > (3 * HOUR + 50 * MINUTE) or not self._connected:
             try:
                 response = requests.post(url=self._auth_url,
                                          data={
@@ -68,19 +68,29 @@ class DropBox:
                 oauth_result = response.json()
                 self._token = oauth_result.get("access_token")
                 self._token_timer = time.time()
-                self._client = dropbox.Dropbox(self._token)
                 logger.info(f"Successfully get an access token for appkey:{self._app_key}")
+                if self._connected:
+                    self._client.close()
+                    self.start()
             except requests.exceptions.HTTPError as e:
                 logger.error(f"Unable to refresh access token for appkey:{self._app_key}: {e.__repr__()}")
 
-    def __enter__(self):
-        self._refresh_access_token()
-        logger.info(f"Dropbox client appkey:{self._app_key} started")
-        return self
+    def start(self):
+        if not self._connected:
+            self._refresh_access_token()
+        self._client = dropbox.Dropbox(self._token)
+        logger.info(f"Dropbox client appkey:{self._app_key} connected")
+        self._connected = True
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._client.close()
-        logger.info(f"Dropbox client appkey:{self._app_key} closed")
+    def stop(self):
+        if self._connected:
+            self._client.close()
+            self._client = None
+            logger.info(f"Dropbox client appkey:{self._app_key} disconnected")
+            self._connected = False
+
+    def is_connected(self):
+        return self._connected
 
     @_async_wrap
     def upload(self, local_path: Path) -> str | None:
@@ -177,5 +187,5 @@ class DropBox:
             logger.info(f"appkey:{self._app_key} space: {(allocated_space - space.used) / MB:.2f} MB")
             return (allocated_space - space.used) / MB
         except Exception as e:
-            f"Exception occurred trying to get remaining appkey:{self._app_key} space: {e.__repr__()}"
+            logger.error(f"Exception occurred trying to get remaining appkey:{self._app_key} space: {e.__repr__()}")
         return 0

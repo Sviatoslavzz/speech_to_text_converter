@@ -4,7 +4,7 @@ from pathlib import Path
 from faster_whisper import WhisperModel
 from loguru import logger
 
-from transcribers.abscract import AbstractTranscriber
+from transcribers.abscract_transcriber import AbstractTranscriber
 
 
 class FasterWhisperTranscriber(AbstractTranscriber):

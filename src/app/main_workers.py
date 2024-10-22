@@ -4,10 +4,11 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from executors.process_executor import ProcessExecutor
-from objects import TranscriptionTask, YouTubeVideo, get_env, get_save_dir
+from objects import TranscriptionTask, YouTubeVideo, get_env, get_save_dir, DownloadTask, MB
+from storage.storage_worker import storage_worker_as_target
 from transcribers.transcriber_worker import transcriber_worker_as_target
 from youtube_workers.youtube_api import YouTubeClient
-from youtube_workers.yt_dlp_loader import YouTubeLoader
+from youtube_workers.youtube_loader import YouTubeLoader
 
 
 def get_clients() -> tuple[YouTubeClient, YouTubeLoader]:
@@ -42,14 +43,20 @@ async def get_channel_videos_worker(link: str) -> tuple[bool, int, list[YouTubeV
     return True, amount, videos
 
 
-async def download_video_worker(videos: list[YouTubeVideo], chat_id: str) -> AsyncGenerator[tuple[bool, Path], None]:
-    _, youtube_loader = get_clients()
-    for video in videos:
-        result, path_ = await youtube_loader.download_video(video=video, required_height=480, uid=chat_id)
-        if result:
-            yield result, path_
-        else:
-            yield False, video.link
+async def download_video_worker(task: DownloadTask) -> DownloadTask:
+    """
+    Sends the task for video downloading.
+    If file size exceeds tg max transfer size sends the task for uploading to storage
+    :param task: DownloadTask
+    :return: DownloadTask
+    """
+    _, client = get_clients()
+    result: DownloadTask = await client.download_video(task)
+
+    if result and result.file_size > 50 * MB:
+        pass  # TODO async run dropbox
+
+    return result
 
 
 async def download_audio_worker(videos: list[YouTubeVideo], chat_id: str) -> AsyncGenerator[tuple[bool, Path], None]:
@@ -88,6 +95,37 @@ async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[Trans
         executor.start()
 
     async def submit_task(task_: TranscriptionTask) -> TranscriptionTask:
+        executor.put_task(task_)
+        while True:
+            result = await asyncio.to_thread(executor.get_result)
+            if result:
+                if task_.id == result.id:
+                    return result
+                executor.put_result(result)
+
+            await asyncio.sleep(0.1)
+
+    async_tasks = [asyncio.create_task(submit_task(task)) for task in tasks]
+    process_result = await asyncio.gather(*async_tasks)
+
+    return list(process_result)
+
+
+async def run_storage_executor(tasks: list[DownloadTask]) -> list[DownloadTask]:
+    """
+    Runs storage_worker in a separate process,
+    puts download tasks to process Queue,
+    and asynchronously wait for results
+    Returns: list of DownloadTask
+    """
+    executor = ProcessExecutor.get_instance()
+    if not executor:
+        executor = ProcessExecutor(storage_worker_as_target)
+        executor.configure(q_size=500, context="spawn", process_name="python_storage_worker")
+        executor.set_name("storage_worker")
+        executor.start()
+
+    async def submit_task(task_: DownloadTask) -> DownloadTask:
         executor.put_task(task_)
         while True:
             result = await asyncio.to_thread(executor.get_result)

@@ -128,6 +128,7 @@ class YouTubeClient:
                                     title=item["snippet"]["title"],
                                     link=None,
                                 )
+                                video.generate_link()
                                 amount += 1
                                 videos.append(video)
                         else:
@@ -179,6 +180,7 @@ class YouTubeClient:
                             title=response_json["items"][0]["snippet"]["title"],
                             link=None,
                         )
+                        video.generate_link()
                         logger.info(f"Got the video by id: {video_id}")
                     else:
                         logger.warning(f"Unable to get video by id: {video_id}")

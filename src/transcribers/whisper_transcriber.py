@@ -4,7 +4,7 @@ from pathlib import Path
 import whisper
 from loguru import logger
 
-from transcribers.abscract import AbstractTranscriber
+from transcribers.abscract_transcriber import AbstractTranscriber
 
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
 

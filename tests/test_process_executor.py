@@ -3,9 +3,9 @@ from time import sleep
 
 import pytest
 
-from app.main_workers import run_transcriber_executor
+from app.main_workers import run_transcriber_executor, run_storage_executor
 from executors.process_executor import ProcessExecutor
-from objects import TranscriptionTask
+from objects import TranscriptionTask, YouTubeVideo, DownloadTask, VideoOptions
 
 
 def sync_function(a: int, b: str) -> int:
@@ -148,6 +148,29 @@ async def test_e2e_with_transcriber(saving_path, files):
         assert result.transcription_path is not None
         assert result.file_size is not None
         result.transcription_path.unlink(missing_ok=False)
+
+    executor = ProcessExecutor.get_instance()
+    executor.stop()
+    assert not executor.is_alive()
+
+# @pytest.mark.skip(reason="only manual run")
+@pytest.mark.asyncio
+async def test_e2e_with_storage(youtube_api_client, youtube_loader, youtube_videos_for_load):
+    tasks = []
+    for link in youtube_videos_for_load:
+        video: YouTubeVideo = await youtube_api_client.get_video_by_link(link)
+        task: DownloadTask = DownloadTask(video=video, id=video.id, options=VideoOptions())
+        task = await youtube_loader.download_video(task)
+        tasks.append(task)
+
+    results = await run_storage_executor(tasks)
+
+    assert len(results) == len(tasks)
+
+    for result in results:
+        assert result.result is True
+        assert "dropbox" in result.storage_link
+        assert result.file_size is not None
 
     executor = ProcessExecutor.get_instance()
     executor.stop()
