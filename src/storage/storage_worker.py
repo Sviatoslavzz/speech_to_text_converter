@@ -76,6 +76,7 @@ class StorageWorker:
             if local_path.name in storage.cls.list_storage_files():
                 return await storage.cls.upload(local_path)
 
+        # TODO перенести полный таск сюда и добавить исключения когда больше нет места в хранилище
         return await self.storages[0].cls.upload(local_path)
 
     async def update_space(self):
@@ -92,16 +93,16 @@ class StorageWorker:
         Assumed to be called constantly
         """
         if time.time() - self.timer > MINUTE:
+            self.timer = time.time()
             for storage in self.storages:
                 await storage.cls.timer_delete()
             await self.update_space()
-            self.timer = time.time()
 
 
 async def storage_worker_as_target(task: DownloadTask | None = None) -> DownloadTask | None:
     sw = StorageWorker.get_instance()
     if not sw:
-        sw = StorageWorker(storage_time=60)  # TODO storage time from conf?
+        sw = StorageWorker(storage_time=5 * MINUTE)  # TODO storage time from conf?
         await sw.update_space()
 
     if task and task.local_path:

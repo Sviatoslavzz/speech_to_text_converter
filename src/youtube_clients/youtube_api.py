@@ -143,7 +143,7 @@ class YouTubeClient:
         return amount, videos
 
     async def get_video_by_link(self, link: str) -> YouTubeVideo | None:
-        patterns = [r"v=([^&]+)", r"shorts/([^&]+)", r"live/([^&]+)"]
+        patterns = [r"v=([^&]+)", r"shorts/([^&]+)", r"live/([^&]+)", r"youtu.be/([^&]+)"]
         video_obj = None
         for pattern in patterns:
             match = re.search(pattern, link)

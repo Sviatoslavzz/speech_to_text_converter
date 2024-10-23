@@ -1,33 +1,29 @@
 import asyncio
 import re
 from collections.abc import AsyncGenerator
-from pathlib import Path
 
 from executors.process_executor import ProcessExecutor
+from executors.storage_executor import StorageExecutor
 from objects import TranscriptionTask, YouTubeVideo, get_env, get_save_dir, DownloadTask, MB
 from storage.storage_worker import storage_worker_as_target
 from transcribers.transcriber_worker import transcriber_worker_as_target
-from youtube_workers.youtube_api import YouTubeClient
-from youtube_workers.youtube_loader import YouTubeLoader
+from youtube_clients.youtube_api import YouTubeClient
+from youtube_clients.youtube_loader import YouTubeLoader
 
 
-def get_clients() -> tuple[YouTubeClient, YouTubeLoader]:
-    youtube_client = YouTubeClient(get_env().get("YOUTUBE_API")) \
-        if not YouTubeClient.get_instance() \
-        else YouTubeClient.get_instance()
+def get_api_client() -> YouTubeClient:
+    return YouTubeClient(
+        get_env().get("YOUTUBE_API")) if not YouTubeClient.get_instance() else YouTubeClient.get_instance()
 
-    youtube_loader = YouTubeLoader(get_save_dir()) \
-        if not YouTubeLoader.get_instance() \
-        else YouTubeLoader.get_instance()
 
-    return youtube_client, youtube_loader
+def get_loader() -> YouTubeLoader:
+    return YouTubeLoader(get_save_dir()) if not YouTubeLoader.get_instance() else YouTubeLoader.get_instance()
 
 
 async def convert_links_to_videos(links: str) -> AsyncGenerator[tuple[bool, str, YouTubeVideo | None], None]:
     links = re.split(r"[ ,\n]+", links)
-    youtube_client, _ = get_clients()
     for link in links:
-        video = await youtube_client.get_video_by_link(link.strip())
+        video = await get_api_client().get_video_by_link(link.strip())
         if not video:
             yield False, link, None
         else:
@@ -35,12 +31,18 @@ async def convert_links_to_videos(links: str) -> AsyncGenerator[tuple[bool, str,
 
 
 async def get_channel_videos_worker(link: str) -> tuple[bool, int, list[YouTubeVideo] | None]:
-    youtube_client, _ = get_clients()
-    channel_id = await youtube_client.get_channel_id_by_link(link.strip())
+    channel_id = await get_api_client().get_channel_id_by_link(link.strip())
     if not channel_id:
         return False, 0, None
-    amount, videos = await youtube_client.get_channel_videos(channel_id)
+    amount, videos = await get_api_client().get_channel_videos(channel_id)
     return True, amount, videos
+
+
+async def check_file_size(task: DownloadTask | TranscriptionTask) -> DownloadTask | TranscriptionTask:
+    if task.result and task.file_size > 50 * MB:
+        tasks = await run_storage_executor([task])
+        return tasks[0]
+    return task
 
 
 async def download_video_worker(task: DownloadTask) -> DownloadTask:
@@ -48,36 +50,35 @@ async def download_video_worker(task: DownloadTask) -> DownloadTask:
     Sends the task for video downloading.
     If file size exceeds tg max transfer size sends the task for uploading to storage
     :param task: DownloadTask
-    :return: DownloadTask
+    :return: filled DownloadTask
     """
-    _, client = get_clients()
-    result: DownloadTask = await client.download_video(task)
+    task: DownloadTask = await get_loader().download_video(task)
 
-    if result and result.file_size > 50 * MB:
-        pass  # TODO async run dropbox
-
-    return result
+    return await check_file_size(task)
 
 
-async def download_audio_worker(videos: list[YouTubeVideo], chat_id: str) -> AsyncGenerator[tuple[bool, Path], None]:
-    _, youtube_loader = get_clients()
-    for video in videos:
-        result, path_ = await youtube_loader.download_audio(video=video, uid=chat_id)
-        if result:
-            yield result, path_
-        else:
-            yield False, video.link
+async def download_audio_worker(task: DownloadTask) -> DownloadTask:
+    """
+    Sends the task for audio downloading.
+    If file size exceeds tg max transfer size sends the task for uploading to storage
+    :param task: DownloadTask
+    :return: filled DownloadTask
+    """
+    task: DownloadTask = await get_loader().download_audio(task)
+
+    return await check_file_size(task)
 
 
-async def download_subtitles_worker(videos: list[YouTubeVideo],
-                                    chat_id: str) -> AsyncGenerator[tuple[bool, Path | str], None]:
-    _, youtube_loader = get_clients()
-    for video in videos:
-        result, path_ = await youtube_loader.get_captions(video=video, uid=chat_id)
-        if result:
-            yield result, path_
-        else:
-            yield False, video.link
+async def download_subtitles_worker(task: DownloadTask) -> DownloadTask:
+    """
+    Sends the task for subtitles downloading.
+    If file size exceeds tg max transfer size sends the task for uploading to storage
+    :param task: DownloadTask
+    :return: filled DownloadTask
+    """
+    task: DownloadTask = await get_loader().get_captions(task)
+
+    return await check_file_size(task)
 
 
 async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[TranscriptionTask]:
@@ -118,9 +119,9 @@ async def run_storage_executor(tasks: list[DownloadTask]) -> list[DownloadTask]:
     and asynchronously wait for results
     Returns: list of DownloadTask
     """
-    executor = ProcessExecutor.get_instance()
+    executor = StorageExecutor.get_instance()
     if not executor:
-        executor = ProcessExecutor(storage_worker_as_target)
+        executor = StorageExecutor(storage_worker_as_target)
         executor.configure(q_size=500, context="spawn", process_name="python_storage_worker")
         executor.set_name("storage_worker")
         executor.start()

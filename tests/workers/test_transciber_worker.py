@@ -14,7 +14,7 @@ async def test_transciber_worker_async(saving_path, files, transcriber_worker):
     results: list[TranscriptionTask] = await asyncio.gather(*tasks)
     for task in results:
         assert task.result is True
-        task.transcription_path.unlink(missing_ok=True)
+        task.local_path.unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
@@ -25,7 +25,7 @@ async def test_e2e(saving_path, videos_without_subtitles, youtube_loader, transc
         assert state is True
         task: TranscriptionTask = await transcriber_worker.transcribe(TranscriptionTask(origin_path=path_))
         assert task.result is True
-        task.transcription_path.unlink(missing_ok=True)
+        task.local_path.unlink(missing_ok=True)
         task.origin_path.unlink(missing_ok=True)
 
 
@@ -36,7 +36,7 @@ async def example_task(youtube_api_client, youtube_loader, transcriber_worker, l
     result_task: TranscriptionTask = await transcriber_worker.transcribe(TranscriptionTask(origin_path=path_))
     assert result_task.result is True
     result_task.origin_path.unlink(missing_ok=True)
-    result_task.transcription_path.unlink(missing_ok=True)
+    result_task.local_path.unlink(missing_ok=True)
 
 
 @pytest.mark.timeout(30)

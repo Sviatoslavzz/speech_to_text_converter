@@ -56,7 +56,7 @@ class YouTubeVideo:
 
 @dataclass(slots=True)
 class AppMessage:
-    message: dict[str, str]
+    message: dict[str, str] = field(default_factory=dict)
     available_languages: list[str] = field(default_factory=lambda: ["ru"])
 
 
@@ -64,10 +64,10 @@ class AppMessage:
 class TranscriptionTask:
     origin_path: Path
     id: str
-    transcription_path: Path | None = None
+    message: AppMessage
+    local_path: Path | None = None
     result: bool | None = False
     file_size: int | None = None
-    message: AppMessage | None = None
 
 
 @dataclass(slots=True)
@@ -75,6 +75,7 @@ class VideoOptions:
     extension: str = "mp4"
     height: int = 720
     fps: int = 30
+    language: str = "ru"
 
 
 @dataclass(slots=True)
@@ -82,11 +83,11 @@ class DownloadTask:
     video: YouTubeVideo
     id: str
     options: VideoOptions
+    message: AppMessage
     local_path: Path | None = None
     storage_link: str | None = None
     result: bool = False
     file_size: int | None = None
-    message: AppMessage | None = None
 
 
 class UserRoute(StatesGroup):

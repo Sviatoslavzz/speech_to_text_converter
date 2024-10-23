@@ -70,14 +70,13 @@ class YouTubeLoader:
         return wrapper
 
     @_async_wrap
-    def download_audio(self, video: YouTubeVideo, uid: str = "") -> (bool, Path):
+    def download_audio(self, task: DownloadTask) -> DownloadTask:
         """
         Downloads audio from the YouTube video.
-        :param video: YouTubeVideo instance with the checked video meta
-        :param uid: Unique id
-        :return: tuple(bool, Path)
+        :param task: DownloadTask
+        :return: filled DownloadTask
         """
-        title = f"{uid}_{self.prepare_title(video.title)}"
+        title = f"{task.id}_{self.prepare_title(task.video.title)}"
         config = copy.deepcopy(self.__config)
         config["postprocessors"] = [
             {
@@ -91,21 +90,25 @@ class YouTubeLoader:
         config["outtmpl"] = f"{self.dir}/{title}.%(ext)s"
         try:
             with yt_dlp.YoutubeDL(config) as ydl:
-                ydl.download([video.generate_link()])
-                logger.info(f"{uid} Audio downloaded to {self.dir}/{title}.{ext}")
-                return True, Path(f"{self.dir}/{title}.{ext}")
+                ydl.download([task.video.link])
+                task.result = True
+                task.local_path = Path(f"{self.dir}/{title}.{ext}")
+                task.file_size = task.local_path.stat().st_size
+                logger.info(f"{task.id} Audio downloaded to {self.dir}/{title}.{ext}")
         except yt_dlp.utils.DownloadError:
-            logger.error(f"{uid} Exception during audio download for video id: {video.id}")
-            return False, Path()
+            logger.error(f"{task.id} Exception during audio download for video id: {task.video.id}")
+            task.message.message["ru"] = "Произошла ошибка при скачивании аудио файла"
+            task.result = False
+
+        return task
 
     @_async_wrap
     def download_video(self, task: DownloadTask) -> DownloadTask:
         """
         Downloads video from the YouTube video.
         :param task: DownloadTask
-        :return: DownloadTask
+        :return: filled DownloadTask
         """
-
         title = f"{task.id}_{self.prepare_title(task.video.title)}"
         config = copy.deepcopy(self.__config)
         config["outtmpl"] = f"{self.dir}/{title}.%(ext)s"
@@ -120,33 +123,29 @@ class YouTubeLoader:
                 task.local_path = Path(f"{self.dir}/{title}.{task.options.extension}")
                 task.file_size = task.local_path.stat().st_size
                 task.result = True
-                return task
-
         except Exception as e:
             logger.error(f"{task.id} Exception during video download for video id: {task.video.id}, {e.__repr__()}")
+            task.message.message["ru"] = "Произошла ошибка при скачивании видео файла"
+            task.result = False
 
-        task.message.message["ru"] = "Произошла ошибка при скачивании видео файла"
-        task.result = False
         return task
 
     @_async_wrap
-    def get_captions(self, video: YouTubeVideo, preferred_language: str | None = "ru", uid: str = "") -> (bool, Path):
+    def get_captions(self, task: DownloadTask) -> DownloadTask:
         """
         Downloads captions from the YouTube video.
-        :param video: YouTubeVideo instance with the checked video meta
-        :param preferred_language: e.g. "ru"
-        :param uid: unique id
-        :return: tuple(bool, Path)
+        :param task: DownloadTask
+        :return: filled DownloadTask
         """
-        title = f"{uid}_{self.prepare_title(video.title)}"
+        title = f"{task.id}_{self.prepare_title(task.video.title)}"
         transcript = None
 
         try:
-            available_transcripts = YouTubeTranscriptApi.list_transcripts(video_id=video.id)
+            available_transcripts = YouTubeTranscriptApi.list_transcripts(video_id=task.video.id)
             transcript_obj_any = None
             for transcript_obj in available_transcripts:
                 transcript_obj_any = transcript_obj
-                if transcript_obj.language_code == preferred_language:
+                if transcript_obj.language_code == task.options.language:
                     transcript = transcript_obj.fetch()
                     break
             if (
@@ -158,17 +157,20 @@ class YouTubeLoader:
             elif not transcript:
                 raise NoTranscriptFound
 
-            logger.info(f"{uid} Successfully got a transcript for video: {video.id}")
+            logger.info(f"{task.id} Successfully got a transcript for video: {task.video.id}")
 
         except (NoTranscriptFound, TranscriptsDisabled, Exception) as e:
-            logger.error(f"{uid} {e.__repr__()}")
-
-            return False, Path()
+            logger.error(f"{task.id} {e.__repr__()}")
+            task.message.message["ru"] = f"Не нашел субтитры для видео {task.video.id}"
+            task.result = False
+            return task
 
         target_path: Path = (self.dir / title).with_suffix(".txt")
         with target_path.open("w", encoding="utf-8") as file:
             for entry in transcript:
                 file.write(entry["text"].replace("\n", "") + " ")
-        logger.info(f"{uid} Transcript saved to: {target_path}")
-
-        return True, target_path
+        logger.info(f"{task.id} Transcript saved to: {target_path}")
+        task.local_path = target_path
+        task.file_size = task.local_path.stat().st_size
+        task.result = True
+        return task

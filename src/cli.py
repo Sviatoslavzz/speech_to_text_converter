@@ -9,8 +9,8 @@ from objects import DownloadOptions, YouTubeVideo
 from transcribers.abscract_transcriber import AbstractTranscriber
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 from transcribers.transcriber_worker import TranscriberWorker
-from youtube_workers.youtube_api import YouTubeClient
-from youtube_workers.youtube_loader import YouTubeLoader
+from youtube_clients.youtube_api import YouTubeClient
+from youtube_clients.youtube_loader import YouTubeLoader
 
 # TODO добавление через config
 WHISPER_MODEL = "small"

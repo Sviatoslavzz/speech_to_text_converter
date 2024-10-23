@@ -75,16 +75,16 @@ class TranscriberWorker:
                                     "en": "File format is not supported"}
             return task
 
-        task.transcription_path = task.origin_path.with_suffix(".txt")
+        task.local_path = task.origin_path.with_suffix(".txt")
 
         try:
-            with task.transcription_path.open(mode="w") as file:
+            with task.local_path.open(mode="w") as file:
                 file.write(transcription)
-            logger.info(f"Transcription saved\nwhere: {task.transcription_path}")
+            logger.info(f"Transcription saved\nwhere: {task.local_path}")
             task.result = True
-            task.file_size = task.transcription_path.stat().st_size
+            task.file_size = task.local_path.stat().st_size
         except OSError:
-            logger.error(f"Unable to save transcription to {task.transcription_path}")
+            logger.error(f"Unable to save transcription to {task.local_path}")
             task.result = False
             task.message.message = {"ru": "Не получилось сохранить транскрипцию"}
 

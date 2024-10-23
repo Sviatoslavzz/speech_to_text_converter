@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 
 from executors.process_executor import ProcessExecutor
 from transcribers.transcriber_worker import TranscriberWorker
-from youtube_workers.youtube_api import YouTubeClient
-from youtube_workers.youtube_loader import YouTubeLoader
+from youtube_clients.youtube_api import YouTubeClient
+from youtube_clients.youtube_loader import YouTubeLoader
 
 SAVING_FOLDER = "saved_files"
 

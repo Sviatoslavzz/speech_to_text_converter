@@ -8,8 +8,7 @@ from typing import Any
 
 import dropbox
 import requests
-from dropbox.exceptions import ApiError
-from dropbox.files import CommitInfo, DeleteError, UploadSessionCursor
+from dropbox.files import CommitInfo, UploadSessionCursor
 from loguru import logger
 
 from objects import HOUR, MB, MINUTE, get_env
@@ -108,6 +107,7 @@ class DropBox:
                     with local_path.open("rb") as f:
                         self._client.files_upload(f=f.read(), path=f"/{local_path.name}")
                 self._storage[local_path.name] = time.time()
+                local_path.unlink(missing_ok=True)
                 logger.info(f"File uploaded to appkey:{self._app_key} {local_path.name}")
                 return self._client.sharing_create_shared_link_with_settings(f"/{local_path.name}").url
 
@@ -117,7 +117,6 @@ class DropBox:
             if shared_links.links:
                 return shared_links.links[0].url
             logger.error(f"File already in appkey:{self._app_key} but link is unavailable")
-
         except Exception as e:
             logger.error(f"An exception occurred uploading to appkey:{self._app_key}, {local_path.name} {e.__repr__()}")
 
@@ -140,21 +139,18 @@ class DropBox:
 
     @_async_wrap
     def timer_delete(self):
-        keys_to_delete = []
-        for file in self._storage:
-            if time.time() - self._storage[file] > self._storage_time:
+        for file in list(self._storage):
+            if self._storage.get(file, False) and time.time() - self._storage[file] > self._storage_time:
                 logger.info(f"Found expired file {file}, appkey:{self._app_key}")
+                self._storage.pop(file, None)
                 self.delete(file)
-                keys_to_delete.append(file)
-        for file in keys_to_delete:
-            self._storage.pop(file, None)
 
     def delete(self, filename: str):
         self._refresh_access_token()
         try:
             self._client.files_delete_v2(f"/{filename}")
             logger.info(f"File successfully deleted: {filename}, appkey:{self._app_key}")
-        except (DeleteError, ApiError) as e:
+        except Exception as e:
             logger.error(f"An exception occurred deleting {filename} for appkey:{self._app_key} {e.__repr__()}")
 
     def empty(self) -> bool:
@@ -187,5 +183,5 @@ class DropBox:
             logger.info(f"appkey:{self._app_key} space: {(allocated_space - space.used) / MB:.2f} MB")
             return (allocated_space - space.used) / MB
         except Exception as e:
-            logger.error(f"Exception occurred trying to get remaining appkey:{self._app_key} space: {e.__repr__()}")
+            logger.error(f"Exception occurred trying to get remaining space. appkey:{self._app_key} {e.__repr__()}")
         return 0
