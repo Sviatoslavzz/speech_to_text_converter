@@ -30,7 +30,7 @@ async def convert_links_to_videos(links: str) -> AsyncGenerator[tuple[bool, str,
             yield True, link, video
 
 
-async def get_channel_videos_worker(link: str) -> tuple[bool, int, list[YouTubeVideo] | None]:
+async def get_channel_videos(link: str) -> tuple[bool, int, list[YouTubeVideo] | None]:
     channel_id = await get_api_client().get_channel_id_by_link(link.strip())
     if not channel_id:
         return False, 0, None

@@ -143,7 +143,7 @@ class YouTubeClient:
         return amount, videos
 
     async def get_video_by_link(self, link: str) -> YouTubeVideo | None:
-        patterns = [r"v=([^&]+)", r"shorts/([^&]+)", r"live/([^&]+)", r"youtu.be/([^&]+)"]
+        patterns = [r"v=([^&]+)", r"shorts/([^&]+)", r"live/([^&]+)", r"youtu.be/([^?]+)"]
         video_obj = None
         for pattern in patterns:
             match = re.search(pattern, link)
@@ -151,9 +151,6 @@ class YouTubeClient:
                 video_id = match.group(1)
                 video_obj = await self._form_object_from_video(video_id)
                 break
-
-        if not video_obj:
-            logger.warning(f"Unable to get video id from link {link}")
 
         return video_obj
 

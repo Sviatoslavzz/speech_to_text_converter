@@ -33,12 +33,13 @@ def saving_path() -> Path:
 
 @pytest.fixture
 def youtube_api_client(get_env):
-    return YouTubeClient(get_env.get("YOUTUBE_API"))
+    return YouTubeClient(
+        get_env.get("YOUTUBE_API")) if not YouTubeClient.get_instance() else YouTubeClient.get_instance()
 
 
 @pytest.fixture
 def youtube_loader(saving_path):
-    return YouTubeLoader(saving_path)
+    return YouTubeLoader(saving_path) if not YouTubeLoader.get_instance() else YouTubeLoader.get_instance()
 
 
 @pytest.fixture

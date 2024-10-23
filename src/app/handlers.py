@@ -19,16 +19,23 @@ from app.replies import (
     provide_links,
     welcome_message,
 )
-from objects import (DownloadOptions,
-                     TranscriptionTask,
-                     UserRoute,
-                     YouTubeVideo,
-                     get_save_dir,
-                     DownloadTask,
-                     VideoOptions, AppMessage,
-                     )
-from workers import download_video_worker, download_audio_worker, download_subtitles_worker, get_channel_videos_worker, \
-    convert_links_to_videos, run_transcriber_executor
+from objects import (
+    DownloadOptions,
+    TranscriptionTask,
+    UserRoute,
+    YouTubeVideo,
+    get_save_dir,
+    DownloadTask,
+    AppMessage
+)
+from workers import (
+    download_video_worker,
+    download_audio_worker,
+    download_subtitles_worker,
+    get_channel_videos,
+    convert_links_to_videos,
+    run_transcriber_executor
+)
 
 router = Router()
 
@@ -83,7 +90,7 @@ async def video_handler_links(message: Message, state: FSMContext):
     videos: list[YouTubeVideo] = []
 
     if user_state.get("option") == "channel":
-        result, amount, videos = await get_channel_videos_worker(message.text)
+        result, amount, videos = await get_channel_videos(message.text)
         if not result:
             await message.answer(f"Не нашел канал по данной ссылке{message.text.strip()} ❌")
         elif not amount:
@@ -164,8 +171,6 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
         asyncio.create_task(download_video_worker(DownloadTask(
             video=video,
             id=f"{callback.message.chat.id}{callback.message.message_id}",
-            options=VideoOptions(),
-            message=AppMessage(),
         ))) for video in user_state.get("videos", [])
     ]
 
@@ -201,8 +206,6 @@ async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
         asyncio.create_task(download_audio_worker(DownloadTask(
             video=video,
             id=f"{callback.message.chat.id}{callback.message.message_id}",
-            options=VideoOptions(),
-            message=AppMessage(),
         ))) for video in user_state.get("videos", [])
     ]
 
@@ -238,8 +241,6 @@ async def download_text_handler(callback: CallbackQuery, state: FSMContext):
         asyncio.create_task(download_subtitles_worker(DownloadTask(
             video=video,
             id=f"{callback.message.chat.id}{callback.message.message_id}",
-            options=VideoOptions(),
-            message=AppMessage(),
         ))) for video in user_state.get("videos", [])
     ]
 

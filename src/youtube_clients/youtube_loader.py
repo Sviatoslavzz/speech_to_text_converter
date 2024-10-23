@@ -10,14 +10,14 @@ import yt_dlp
 from loguru import logger
 from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled, YouTubeTranscriptApi
 
-from objects import YouTubeVideo, DownloadTask
+from objects import DownloadTask
 
 
 class YouTubeLoader:
     """
     Singleton client loader.
     Using yt_dlp and youtube_transcript_api libs.
-    internal settings: Semaphore number, ThreadPoolExecutor workers number
+    internal settings: ThreadPoolExecutor workers number
     """
 
     _instance = None
@@ -32,7 +32,6 @@ class YouTubeLoader:
 
     def __init__(self, directory: Path):
         self.dir = directory
-        self.semaphore = asyncio.Semaphore(20)
         self.pool = ThreadPoolExecutor(max_workers=20)
         logger.info("YouTubeLoader initialized (singleton)")
 
@@ -63,9 +62,8 @@ class YouTubeLoader:
     def _async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         async def wrapper(self, *args, **kwargs):  # ANN202
-            async with self.semaphore:
-                loop = asyncio.get_running_loop()
-                return await loop.run_in_executor(self.pool, lambda: func(self, *args, **kwargs))
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(self.pool, lambda: func(self, *args, **kwargs))
 
         return wrapper
 

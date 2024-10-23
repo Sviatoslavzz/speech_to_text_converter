@@ -61,16 +61,6 @@ class AppMessage:
 
 
 @dataclass(slots=True)
-class TranscriptionTask:
-    origin_path: Path
-    id: str
-    message: AppMessage
-    local_path: Path | None = None
-    result: bool | None = False
-    file_size: int | None = None
-
-
-@dataclass(slots=True)
 class VideoOptions:
     extension: str = "mp4"
     height: int = 720
@@ -79,15 +69,24 @@ class VideoOptions:
 
 
 @dataclass(slots=True)
-class DownloadTask:
-    video: YouTubeVideo
+class Task:
     id: str
-    options: VideoOptions
-    message: AppMessage
+    message: AppMessage = field(default_factory=AppMessage)
     local_path: Path | None = None
-    storage_link: str | None = None
-    result: bool = False
+    result: bool | None = False
     file_size: int | None = None
+
+
+@dataclass(slots=True)
+class TranscriptionTask(Task):
+    origin_path: Path | None = None
+
+
+@dataclass(slots=True)
+class DownloadTask(Task):
+    video: YouTubeVideo | None = None
+    options: VideoOptions | None = field(default_factory=VideoOptions)
+    storage_link: str | None = None
 
 
 class UserRoute(StatesGroup):
