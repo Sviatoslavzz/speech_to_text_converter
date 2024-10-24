@@ -19,11 +19,11 @@ class StorageExecutor(ProcessExecutor):
 
         async_tasks = []
         while not stop_event.is_set():
+            task = None
             if not task_queue.empty():
                 task = task_queue.get()
                 logger.info("Got new task from task_queue")
-            else:
-                task = None
+
             async_tasks.append(asyncio.create_task(process_in_target(task)))
             async_tasks = [task for task in async_tasks if not task.done()]
             await asyncio.sleep(0.5)

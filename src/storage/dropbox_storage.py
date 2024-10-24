@@ -18,6 +18,8 @@ class DropBox:
     """
     Dropbox client.
     Requires key, secret and refresh token.
+    Saves files to storage and set timer for keeping it.
+    Once timer is out removes file from storage (requires call)
     """
     _auth_url = "https://api.dropbox.com/oauth2/token"
 
@@ -33,16 +35,14 @@ class DropBox:
         self._app_key = get_env().get("DROPBOX_APP_KEY")
         self._secret = get_env().get("DROPBOX_APP_SECRET")
 
-        self.semaphore = asyncio.Semaphore(20)
         self.pool = ThreadPoolExecutor(max_workers=20)
 
     @staticmethod
     def _async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         async def wrapper(self, *args, **kwargs):  # ANN202
-            async with self.semaphore:
-                loop = asyncio.get_running_loop()
-                return await loop.run_in_executor(self.pool, lambda: func(self, *args, **kwargs))
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(self.pool, lambda: func(self, *args, **kwargs))
 
         return wrapper
 
@@ -107,7 +107,6 @@ class DropBox:
                     with local_path.open("rb") as f:
                         self._client.files_upload(f=f.read(), path=f"/{local_path.name}")
                 self._storage[local_path.name] = time.time()
-                local_path.unlink(missing_ok=True)
                 logger.info(f"File uploaded to appkey:{self._app_key} {local_path.name}")
                 return self._client.sharing_create_shared_link_with_settings(f"/{local_path.name}").url
 
@@ -154,7 +153,7 @@ class DropBox:
             logger.error(f"An exception occurred deleting {filename} for appkey:{self._app_key} {e.__repr__()}")
 
     def empty(self) -> bool:
-        return len(self._storage) == 0
+        return not self._storage
 
     @_async_wrap
     def list_dropbox_files(self) -> list[str]:

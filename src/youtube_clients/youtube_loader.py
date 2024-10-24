@@ -32,8 +32,9 @@ class YouTubeLoader:
 
     def __init__(self, directory: Path):
         self.dir = directory
-        self.pool = ThreadPoolExecutor(max_workers=20)
-        logger.info("YouTubeLoader initialized (singleton)")
+        self.pool_heavy = ThreadPoolExecutor(max_workers=20)
+        self.pool_light = ThreadPoolExecutor(max_workers=40)
+        logger.info("YouTubeLoader initialized")
 
     @classmethod
     def get_instance(cls):
@@ -63,7 +64,12 @@ class YouTubeLoader:
         @wraps(func)
         async def wrapper(self, *args, **kwargs):  # ANN202
             loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(self.pool, lambda: func(self, *args, **kwargs))
+            if func.__name__ == "get_captions":
+                logger.debug(f"RUN {func.__name__}")
+                return await loop.run_in_executor(self.pool_light, lambda: func(self, *args, **kwargs))
+
+            logger.debug(f"RUN {func.__name__}")
+            return await loop.run_in_executor(self.pool_heavy, lambda: func(self, *args, **kwargs))
 
         return wrapper
 
@@ -74,7 +80,7 @@ class YouTubeLoader:
         :param task: DownloadTask
         :return: filled DownloadTask
         """
-        title = f"{task.id}_{self.prepare_title(task.video.title)}"
+        title = f"{task.id}{self.prepare_title(task.video.title)}"
         config = copy.deepcopy(self.__config)
         config["postprocessors"] = [
             {
@@ -107,7 +113,7 @@ class YouTubeLoader:
         :param task: DownloadTask
         :return: filled DownloadTask
         """
-        title = f"{task.id}_{self.prepare_title(task.video.title)}"
+        title = f"{task.id}{self.prepare_title(task.video.title)}"
         config = copy.deepcopy(self.__config)
         config["outtmpl"] = f"{self.dir}/{title}.%(ext)s"
         config["format"] = (
@@ -135,7 +141,7 @@ class YouTubeLoader:
         :param task: DownloadTask
         :return: filled DownloadTask
         """
-        title = f"{task.id}_{self.prepare_title(task.video.title)}"
+        title = f"{task.id}{self.prepare_title(task.video.title)}"
         transcript = None
 
         try:

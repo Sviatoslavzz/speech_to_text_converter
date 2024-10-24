@@ -22,12 +22,15 @@ def get_loader() -> YouTubeLoader:
 
 async def convert_links_to_videos(links: str) -> AsyncGenerator[tuple[bool, str, YouTubeVideo | None], None]:
     links = re.split(r"[ ,\n]+", links)
+    unique_ids = []
     for link in links:
-        video = await get_api_client().get_video_by_link(link.strip())
+        video = await get_api_client().get_video_by_link(link.strip(" ,.'\"-"))
         if not video:
             yield False, link, None
         else:
-            yield True, link, video
+            if video.id not in unique_ids:
+                unique_ids.append(video.id)
+                yield True, link, video
 
 
 async def get_channel_videos(link: str) -> tuple[bool, int, list[YouTubeVideo] | None]:
@@ -39,7 +42,14 @@ async def get_channel_videos(link: str) -> tuple[bool, int, list[YouTubeVideo] |
 
 
 async def check_file_size(task: DownloadTask | TranscriptionTask) -> DownloadTask | TranscriptionTask:
+    """
+    If files size exceeds limit sends Task to StorageExecutor.
+    :param task: DownloadTask or TranscriptionTask
+    :return: DownloadTask or TranscriptionTask
+    """
     if task.result and task.file_size > 50 * MB:
+        if task.id in task.local_path.__fspath__():
+            task.local_path = task.local_path.rename(task.local_path.with_name(task.local_path.name.lstrip(task.id)))
         tasks = await run_storage_executor([task])
         return tasks[0]
     return task
@@ -71,7 +81,7 @@ async def download_audio_worker(task: DownloadTask) -> DownloadTask:
 
 async def download_subtitles_worker(task: DownloadTask) -> DownloadTask:
     """
-    Sends the task for subtitles downloading.
+    Sends the task for captions downloading.
     If file size exceeds tg max transfer size sends the task for uploading to storage
     :param task: DownloadTask
     :return: filled DownloadTask

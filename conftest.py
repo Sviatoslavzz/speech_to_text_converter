@@ -91,6 +91,16 @@ def youtube_videos() -> list[str]:
         "https://www.youtube.com/live/GN2iEGZe16A",
     ]
 
+@pytest.fixture
+def long_youtube_videos() -> list[str]:
+    return [
+        "https://www.youtube.com/watch?v=aN-IbSyIw7Q",
+        "https://www.youtube.com/watch?v=jxmZOR_-4uI",
+        "https://www.youtube.com/watch?v=hUkyLnW6Q30",
+        "https://www.youtube.com/watch?v=DZteznd47B4",
+        "https://www.youtube.com/watch?v=6jzG-BMannc",
+    ]
+
 
 @pytest.fixture
 def youtube_videos_wrong() -> list[str]:

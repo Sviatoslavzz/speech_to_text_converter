@@ -77,7 +77,10 @@ class StorageWorker:
                 return await storage.cls.upload(local_path)
 
         # TODO перенести полный таск сюда и добавить исключения когда больше нет места в хранилище
-        return await self.storages[0].cls.upload(local_path)
+
+        link = await self.storages[0].cls.upload(local_path)
+        local_path.unlink(missing_ok=True)  # этого не должно быть в логике upload самого storage класса
+        return link
 
     async def update_space(self):
         """
@@ -95,7 +98,8 @@ class StorageWorker:
         if time.time() - self.timer > MINUTE:
             self.timer = time.time()
             for storage in self.storages:
-                await storage.cls.timer_delete()
+                if not storage.cls.empty():
+                    await storage.cls.timer_delete()
             await self.update_space()
 
 

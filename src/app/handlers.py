@@ -4,7 +4,7 @@ from pathlib import Path
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, FSInputFile, Message
+from aiogram.types import CallbackQuery, FSInputFile, Message, LinkPreviewOptions
 from google.api_core.exceptions import BadRequest
 from loguru import logger
 
@@ -180,7 +180,8 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
         if result_task.result:
             if result_task.storage_link:
                 await callback.message.answer("Файл оказался велик вот ссылка действует 5 минут")
-                await callback.message.answer(result_task.storage_link)
+                await callback.message.answer(result_task.storage_link,
+                                              link_preview_options=LinkPreviewOptions(is_disabled=True))
                 logger.info(f"{callback.message.chat.id} Link to video file sent")
             else:
                 await callback.message.answer_document(
