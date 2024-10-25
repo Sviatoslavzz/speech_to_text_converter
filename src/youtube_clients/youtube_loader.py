@@ -65,10 +65,7 @@ class YouTubeLoader:
         async def wrapper(self, *args, **kwargs):  # ANN202
             loop = asyncio.get_running_loop()
             if func.__name__ == "get_captions":
-                logger.debug(f"RUN {func.__name__}")
                 return await loop.run_in_executor(self.pool_light, lambda: func(self, *args, **kwargs))
-
-            logger.debug(f"RUN {func.__name__}")
             return await loop.run_in_executor(self.pool_heavy, lambda: func(self, *args, **kwargs))
 
         return wrapper
@@ -171,6 +168,9 @@ class YouTubeLoader:
 
         target_path: Path = (self.dir / title).with_suffix(".txt")
         with target_path.open("w", encoding="utf-8") as file:
+            file.write(f"Название: {task.video.title}\n")
+            file.write(f"Автор: {task.video.owner_username}\n")
+            file.write(f"Дата публикации: {task.video.published_at}\n\n")
             for entry in transcript:
                 file.write(entry["text"].replace("\n", "") + " ")
         logger.info(f"{task.id} Transcript saved to: {target_path}")

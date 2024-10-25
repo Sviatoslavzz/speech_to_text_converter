@@ -142,17 +142,23 @@ class YouTubeClient:
 
         return amount, videos
 
-    async def get_video_by_link(self, link: str) -> YouTubeVideo | None:
+    @staticmethod
+    def get_video_id(link: str) -> str | None:
+        """
+        Search for YouTube link pattern
+        :param link: YouTube link
+        :return: video id
+        """
         patterns = [r"v=([^&]+)", r"shorts/([^&]+)", r"live/([^&]+)", r"youtu.be/([^?]+)"]
-        video_obj = None
         for pattern in patterns:
             match = re.search(pattern, link)
             if match:
-                video_id = match.group(1)
-                video_obj = await self._form_object_from_video(video_id)
-                break
+                return match.group(1)
 
-        return video_obj
+        return None
+
+    async def get_video_by_id(self, id_: str) -> YouTubeVideo | None:
+        return await self._form_object_from_video(id_)
 
     async def _form_object_from_video(self, video_id: str) -> YouTubeVideo | None:
         video = None
@@ -182,6 +188,6 @@ class YouTubeClient:
                     else:
                         logger.warning(f"Unable to get video by id: {video_id}")
             except Exception as error:
-                logger.error(f"Error during http connection try: {error}")
+                logger.error(f"Error during http connection try: {error.__repr__()}")
 
         return video

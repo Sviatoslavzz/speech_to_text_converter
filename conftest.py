@@ -4,7 +4,9 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
+from config import DropboxConfig
 from executors.process_executor import ProcessExecutor
+from storage.dropbox_storage import DropBox
 from transcribers.transcriber_worker import TranscriberWorker
 from youtube_clients.youtube_api import YouTubeClient
 from youtube_clients.youtube_loader import YouTubeLoader
@@ -16,10 +18,14 @@ SAVING_FOLDER = "saved_files"
 def get_env() -> dict[str, str]:
     load_dotenv()
     return {"YOUTUBE_API": os.getenv("YOUTUBE_API"),
-            "TOKEN": os.getenv("TOKEN"),
+            "TG_TOKEN": os.getenv("TG_TOKEN"),
             "DROPBOX_REFRESH_TOKEN": os.getenv("DROPBOX_REFRESH_TOKEN"),
             "DROPBOX_APP_KEY": os.getenv("DROPBOX_APP_KEY"),
-            "DROPBOX_APP_SECRET": os.getenv("DROPBOX_APP_SECRET"), }
+            "DROPBOX_APP_SECRET": os.getenv("DROPBOX_APP_SECRET"),
+            "DROPBOX_REFRESH_TOKEN_2": os.getenv("DROPBOX_REFRESH_TOKEN_2"),
+            "DROPBOX_APP_KEY_2": os.getenv("DROPBOX_APP_KEY_2"),
+            "DROPBOX_APP_SECRET_2": os.getenv("DROPBOX_APP_SECRET_2"),
+            }
 
 
 @pytest.fixture
@@ -62,6 +68,22 @@ def process_executor(request):
 
 
 @pytest.fixture
+def dropbox_conf(get_env):
+    return [
+        DropboxConfig(cls=DropBox,
+                      storage_time=40,
+                      refresh_token=get_env.get("DROPBOX_REFRESH_TOKEN"),
+                      app_key=get_env.get("DROPBOX_APP_KEY"),
+                      app_secret=get_env.get("DROPBOX_APP_SECRET")),
+        DropboxConfig(cls=DropBox,
+                      storage_time=40,
+                      refresh_token=get_env.get("DROPBOX_REFRESH_TOKEN_2"),
+                      app_key=get_env.get("DROPBOX_APP_KEY_2"),
+                      app_secret=get_env.get("DROPBOX_APP_SECRET_2")),
+    ]
+
+
+@pytest.fixture
 def correct_channels_list() -> list[dict[str, str]]:
     return [
         {"link": "https://www.youtube.com/@Web3nity", "id": "UCuaYG7fdQ-4myL_CVtvwNHQ"},
@@ -90,6 +112,7 @@ def youtube_videos() -> list[str]:
         "https://www.youtube.com/shorts/jcVHxxVWazg",
         "https://www.youtube.com/live/GN2iEGZe16A",
     ]
+
 
 @pytest.fixture
 def long_youtube_videos() -> list[str]:

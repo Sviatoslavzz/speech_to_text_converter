@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator
 
 from executors.process_executor import ProcessExecutor
 from executors.storage_executor import StorageExecutor
-from objects import TranscriptionTask, YouTubeVideo, get_env, get_save_dir, DownloadTask, MB
+from objects import MB, DownloadTask, TranscriptionTask, YouTubeVideo, get_env, get_save_dir
 from storage.storage_worker import storage_worker_as_target
 from transcribers.transcriber_worker import transcriber_worker_as_target
 from youtube_clients.youtube_api import YouTubeClient
@@ -24,13 +24,14 @@ async def convert_links_to_videos(links: str) -> AsyncGenerator[tuple[bool, str,
     links = re.split(r"[ ,\n]+", links)
     unique_ids = []
     for link in links:
-        video = await get_api_client().get_video_by_link(link.strip(" ,.'\"-"))
-        if not video:
-            yield False, link, None
-        else:
-            if video.id not in unique_ids:
-                unique_ids.append(video.id)
+        video_id = get_api_client().get_video_id(link.strip(" ,.'\"-"))
+        if video_id and video_id not in unique_ids:
+            unique_ids.append(video_id)
+            video = await get_api_client().get_video_by_id(video_id)
+            if video:
                 yield True, link, video
+            else:
+                yield False, link, None
 
 
 async def get_channel_videos(link: str) -> tuple[bool, int, list[YouTubeVideo] | None]:
@@ -91,6 +92,24 @@ async def download_subtitles_worker(task: DownloadTask) -> DownloadTask:
     return await check_file_size(task)
 
 
+async def submit_task(executor: ProcessExecutor,
+                      task_: TranscriptionTask | DownloadTask) -> TranscriptionTask | DownloadTask:
+    """
+    Transfer a task to executor and waits for the result in a separate thread
+    :param executor: ProcessExecutor
+    :param task_: TranscriptionTask | DownloadTask
+    """
+    executor.put_task(task_)
+    while True:
+        result = await asyncio.to_thread(executor.get_result)
+        if result:
+            if task_.id == result.id:
+                return result
+            executor.put_result(result)
+
+        await asyncio.sleep(0.1)
+
+
 async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[TranscriptionTask]:
     """
     Runs transcriber in a separate process,
@@ -105,18 +124,7 @@ async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[Trans
         executor.set_name("transcriber_worker")
         executor.start()
 
-    async def submit_task(task_: TranscriptionTask) -> TranscriptionTask:
-        executor.put_task(task_)
-        while True:
-            result = await asyncio.to_thread(executor.get_result)
-            if result:
-                if task_.id == result.id:
-                    return result
-                executor.put_result(result)
-
-            await asyncio.sleep(0.1)
-
-    async_tasks = [asyncio.create_task(submit_task(task)) for task in tasks]
+    async_tasks = [asyncio.create_task(submit_task(executor, task)) for task in tasks]
     process_result = await asyncio.gather(*async_tasks)
 
     return list(process_result)
@@ -136,18 +144,7 @@ async def run_storage_executor(tasks: list[DownloadTask]) -> list[DownloadTask]:
         executor.set_name("storage_worker")
         executor.start()
 
-    async def submit_task(task_: DownloadTask) -> DownloadTask:
-        executor.put_task(task_)
-        while True:
-            result = await asyncio.to_thread(executor.get_result)
-            if result:
-                if task_.id == result.id:
-                    return result
-                executor.put_result(result)
-
-            await asyncio.sleep(0.1)
-
-    async_tasks = [asyncio.create_task(submit_task(task)) for task in tasks]
+    async_tasks = [asyncio.create_task(submit_task(executor, task)) for task in tasks]
     process_result = await asyncio.gather(*async_tasks)
 
     return list(process_result)

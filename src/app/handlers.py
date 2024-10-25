@@ -4,12 +4,11 @@ from pathlib import Path
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, FSInputFile, Message, LinkPreviewOptions
+from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions, Message
 from google.api_core.exceptions import BadRequest
 from loguru import logger
 
 from app.keyboards import main_menu, options_menu
-
 from app.replies import (
     choose_channel_button,
     choose_file_button,
@@ -19,22 +18,14 @@ from app.replies import (
     provide_links,
     welcome_message,
 )
-from objects import (
-    DownloadOptions,
-    TranscriptionTask,
-    UserRoute,
-    YouTubeVideo,
-    get_save_dir,
-    DownloadTask,
-    AppMessage
-)
+from objects import AppMessage, DownloadOptions, DownloadTask, TranscriptionTask, UserRoute, YouTubeVideo, get_save_dir
 from workers import (
-    download_video_worker,
+    convert_links_to_videos,
     download_audio_worker,
     download_subtitles_worker,
+    download_video_worker,
     get_channel_videos,
-    convert_links_to_videos,
-    run_transcriber_executor
+    run_transcriber_executor,
 )
 
 router = Router()
@@ -92,17 +83,17 @@ async def video_handler_links(message: Message, state: FSMContext):
     if user_state.get("option") == "channel":
         result, amount, videos = await get_channel_videos(message.text)
         if not result:
-            await message.answer(f"Не нашел канал по данной ссылке{message.text.strip()} ❌")
+            await message.answer(f"Не нашел канал по данной ссылке {message.text.strip()} ❌")
         elif not amount:
             await message.answer("Не нашел видео на данном канале ❌")
         else:
-            await message.answer(f"Нашел {amount} видео на канале ✅")
+            await message.answer(f"Нашел {amount} видео на канале {videos[0].owner_username} ✅")
     elif user_state.get("option") == "video":
         async for result, link, video in convert_links_to_videos(message.text):
             if not result:
-                await message.answer(f"{link} ❌")
+                await message.answer(text=f"{link} ❌", link_preview_options=LinkPreviewOptions(is_disabled=True))
             else:
-                await message.answer(f"{video.id} ✅")
+                await message.answer(f"Нашел видео {video.title} ✅")
                 videos.append(video)
 
     if videos:

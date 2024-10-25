@@ -3,10 +3,9 @@ from time import sleep
 
 import pytest
 
-from app.main_workers import run_transcriber_executor, run_storage_executor
+from app.main_workers import run_transcriber_executor
 from executors.process_executor import ProcessExecutor
-from executors.storage_executor import StorageExecutor
-from objects import TranscriptionTask, YouTubeVideo, DownloadTask, VideoOptions
+from objects import TranscriptionTask
 
 
 def sync_function(a: int, b: str) -> int:

@@ -2,9 +2,9 @@ import asyncio
 
 import pytest
 
-from app.main_workers import run_storage_executor
 from executors.storage_executor import StorageExecutor
-from objects import YouTubeVideo, DownloadTask, VideoOptions
+from objects import DownloadTask, VideoOptions, YouTubeVideo
+from workers import run_storage_executor
 
 
 @pytest.mark.skip(reason="Requires changing storage timeout ~45 recommended")
@@ -12,7 +12,7 @@ from objects import YouTubeVideo, DownloadTask, VideoOptions
 async def test_e2e_with_storage(youtube_api_client, youtube_loader, youtube_videos_for_load):
     tasks = []
     for link in youtube_videos_for_load:
-        video: YouTubeVideo = await youtube_api_client.get_video_by_link(link)
+        video: YouTubeVideo = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
         task: DownloadTask = DownloadTask(video=video, id=video.id, options=VideoOptions())
         task = await youtube_loader.download_video(task)
         tasks.append(task)

@@ -51,7 +51,7 @@ async def collect_videos() -> list[YouTubeVideo | None]:
         link = input()
         while link != "":
             if "youtube.com" in link:
-                video = await client.get_video_by_link(link.strip())
+                video = await client.get_video_by_id(link.strip())
                 if video:
                     videos.append(video)
             link = input()

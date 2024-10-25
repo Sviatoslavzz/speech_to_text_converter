@@ -19,7 +19,11 @@ def get_env() -> dict[str, str]:
             "TG_TOKEN": os.getenv("TG_TOKEN"),
             "DROPBOX_REFRESH_TOKEN": os.getenv("DROPBOX_REFRESH_TOKEN"),
             "DROPBOX_APP_KEY": os.getenv("DROPBOX_APP_KEY"),
-            "DROPBOX_APP_SECRET": os.getenv("DROPBOX_APP_SECRET"), }
+            "DROPBOX_APP_SECRET": os.getenv("DROPBOX_APP_SECRET"),
+            "DROPBOX_REFRESH_TOKEN_2": os.getenv("DROPBOX_REFRESH_TOKEN_2"),
+            "DROPBOX_APP_KEY_2": os.getenv("DROPBOX_APP_KEY_2"),
+            "DROPBOX_APP_SECRET_2": os.getenv("DROPBOX_APP_SECRET_2"),
+            }
 
 
 def get_save_dir() -> Path:

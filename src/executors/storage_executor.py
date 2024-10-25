@@ -1,7 +1,8 @@
 import asyncio
 
-from executors.process_executor import ProcessExecutor
 from loguru import logger
+
+from executors.process_executor import ProcessExecutor
 
 
 class StorageExecutor(ProcessExecutor):

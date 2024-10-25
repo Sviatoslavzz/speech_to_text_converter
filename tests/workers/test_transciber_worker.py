@@ -20,7 +20,7 @@ async def test_transciber_worker_async(saving_path, files, transcriber_worker):
 @pytest.mark.asyncio
 async def test_e2e(saving_path, videos_without_subtitles, youtube_loader, transcriber_worker, youtube_api_client):
     for link in videos_without_subtitles:
-        video = await youtube_api_client.get_video_by_link(link)
+        video = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
         state, path_ = await youtube_loader.download_audio(video)
         assert state is True
         task: TranscriptionTask = await transcriber_worker.transcribe(TranscriptionTask(origin_path=path_))
@@ -30,7 +30,7 @@ async def test_e2e(saving_path, videos_without_subtitles, youtube_loader, transc
 
 
 async def example_task(youtube_api_client, youtube_loader, transcriber_worker, link: str):
-    video = await youtube_api_client.get_video_by_link(link)
+    video = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
     state, path_ = await youtube_loader.download_audio(video)
     assert state is True
     result_task: TranscriptionTask = await transcriber_worker.transcribe(TranscriptionTask(origin_path=path_))

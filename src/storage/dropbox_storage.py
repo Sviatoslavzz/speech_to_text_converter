@@ -11,7 +11,8 @@ import requests
 from dropbox.files import CommitInfo, UploadSessionCursor
 from loguru import logger
 
-from objects import HOUR, MB, MINUTE, get_env
+from config import DropboxConfig
+from objects import HOUR, MB, MINUTE
 
 
 class DropBox:
@@ -23,19 +24,25 @@ class DropBox:
     """
     _auth_url = "https://api.dropbox.com/oauth2/token"
 
-    def __init__(self, storage_time: float = 30 * MINUTE):
+    def __init__(self, config: DropboxConfig):
         self._client: dropbox.Dropbox | None = None
         self._token: str | None = None
         self._token_timer: float = 0
         self._storage: dict[str, float] = {}
-        self._storage_time = storage_time
+        self._storage_time = config.storage_time
         self._connected = False
 
-        self._refresh_token = get_env().get("DROPBOX_REFRESH_TOKEN")
-        self._app_key = get_env().get("DROPBOX_APP_KEY")
-        self._secret = get_env().get("DROPBOX_APP_SECRET")
+        self._refresh_token = config.refresh_token
+        self._app_key = config.app_key
+        self._secret = config.app_secret
+        self.check_auth_tokens()
 
         self.pool = ThreadPoolExecutor(max_workers=20)
+
+    def check_auth_tokens(self) -> None:
+        if not (self._refresh_token and self._app_key and self._secret):
+            logger.error(f"{self.__class__.__name__} accepts exactly 3 tokens: refresh_token, app_key, secret")
+            raise Exception(f"{self.__class__.__name__} accepts exactly 3 tokens: refresh_token, app_key, secret")
 
     @staticmethod
     def _async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:

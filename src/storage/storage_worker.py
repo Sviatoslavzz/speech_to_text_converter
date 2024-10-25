@@ -1,16 +1,17 @@
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Type
 
 from loguru import logger
-from objects import DownloadTask, MINUTE
+
+from config import DropboxConfig
+from objects import MINUTE, DownloadTask, get_env
 from storage.dropbox_storage import DropBox
 
 
 @dataclass(slots=True)
 class Storage:
-    cls: Type[DropBox]
+    cls: DropBox
     space: int = 0
 
 
@@ -28,11 +29,10 @@ class StorageWorker:
 
         return cls._instance
 
-    def __init__(self, storage_time: float = 30 * MINUTE):
+    def __init__(self, config: list[DropboxConfig]):
         logger.info(f"{self.__class__.__name__}: Initializing...")
-        self.storages = [Storage(cls=DropBox)]
+        self.storages = [Storage(cls=storage_conf.cls(storage_conf)) for storage_conf in config]
         self._connected = False
-        self.storage_time = storage_time
         self._initialize_storages()
         self.timer = time.time()
 
@@ -42,7 +42,6 @@ class StorageWorker:
 
     def _initialize_storages(self):
         for i in range(len(self.storages)):
-            self.storages[i].cls = self.storages[i].cls(storage_time=self.storage_time)
             self.storages[i].cls.start()
         self._connected = True
         logger.info(f"{self.__class__.__name__} started {len(self.storages)} storages.")
@@ -88,7 +87,7 @@ class StorageWorker:
         """
         for storage in self.storages:
             storage.space = await storage.cls.storage_space()
-        sorted(self.storages, key=lambda x: x.space, reverse=True)
+        self.storages = sorted(self.storages, key=lambda x: x.space, reverse=True)
 
     async def check_timer(self):
         """
@@ -106,7 +105,18 @@ class StorageWorker:
 async def storage_worker_as_target(task: DownloadTask | None = None) -> DownloadTask | None:
     sw = StorageWorker.get_instance()
     if not sw:
-        sw = StorageWorker(storage_time=5 * MINUTE)  # TODO storage time from conf?
+        # TODO вынести отсюда наверх - передавать каждый раз как аргумент
+        conf = [
+            DropboxConfig(cls=DropBox,
+                          refresh_token=get_env().get("DROPBOX_REFRESH_TOKEN"),
+                          app_key=get_env().get("DROPBOX_APP_KEY"),
+                          app_secret=get_env().get("DROPBOX_APP_SECRET")),
+            DropboxConfig(cls=DropBox,
+                          refresh_token=get_env().get("DROPBOX_REFRESH_TOKEN_2"),
+                          app_key=get_env().get("DROPBOX_APP_KEY_2"),
+                          app_secret=get_env().get("DROPBOX_APP_SECRET_2")),
+        ]
+        sw = StorageWorker(conf)
         await sw.update_space()
 
     if task and task.local_path:

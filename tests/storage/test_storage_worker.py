@@ -3,14 +3,14 @@ import time
 
 import pytest
 
-from objects import DownloadTask, YouTubeVideo, VideoOptions
+from objects import DownloadTask, VideoOptions, YouTubeVideo
 from storage.storage_worker import StorageWorker, storage_worker_as_target
 
 
-def test_launch():
+def test_launch(dropbox_conf):
     sw = StorageWorker.get_instance()
     if not sw:
-        sw = StorageWorker(storage_time=120)
+        sw = StorageWorker(dropbox_conf)
     if not sw.is_connected():
         sw.connect_storages()
     time.sleep(2)
@@ -18,10 +18,10 @@ def test_launch():
 
 
 @pytest.mark.asyncio
-async def test_update_space():
+async def test_update_space(dropbox_conf):
     sw = StorageWorker.get_instance()
     if not sw:
-        sw = StorageWorker(storage_time=120)
+        sw = StorageWorker(dropbox_conf)
     if not sw.is_connected():
         sw.connect_storages()
     await sw.update_space()
@@ -29,26 +29,31 @@ async def test_update_space():
     sw.stop_storages()
 
 
-@pytest.mark.skip(reason="Only manual testing, requires manual limiting for storage timers")
 @pytest.mark.asyncio
-async def test_worker_as_target_e2e(youtube_api_client, youtube_loader, youtube_videos_for_load):
+async def test_worker_as_target_e2e(youtube_api_client, youtube_loader, youtube_videos_for_load, dropbox_conf):
+    sw = StorageWorker.get_instance()
+    if not sw:
+        sw = StorageWorker(dropbox_conf)
+    if not sw.is_connected():
+        sw.connect_storages()
+
+    spaces = await sw.update_space()
+
     for link in youtube_videos_for_load:
-        video: YouTubeVideo = await youtube_api_client.get_video_by_link(link)
+        video: YouTubeVideo = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
         task: DownloadTask = DownloadTask(video=video, id=video.id, options=VideoOptions())
         task = await youtube_loader.download_video(task)
-        print(f"path = {task.local_path}")
-        print(f"result = {task.result}")
-        print(f"file size = {task.file_size}")
-
         task = await storage_worker_as_target(task)
-        print(task.storage_link)
+        assert task.result
+        assert "dropbox" in task.storage_link
 
     cur_time = time.time()
 
-    while time.time() < cur_time + 150:
+    while time.time() < cur_time + 90:
         await storage_worker_as_target()
         await asyncio.sleep(1)
 
-    sw = StorageWorker.get_instance()
+    assert spaces == await sw.update_space()
+
     if sw and sw.is_connected():
         sw.stop_storages()
