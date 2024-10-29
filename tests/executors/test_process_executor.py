@@ -27,9 +27,7 @@ def test_init():
 
 
 @pytest.mark.parametrize(
-    "process_executor",
-    [{"target": sync_function, "args": (), "kwargs": {"a": 5, "b": "5"}}],
-    indirect=True
+    "process_executor", [{"target": sync_function, "args": (), "kwargs": {"a": 5, "b": "5"}}], indirect=True
 )
 def test_reinit_wrong(process_executor):
     process_executor.configure(process_name="test")
@@ -40,9 +38,7 @@ def test_reinit_wrong(process_executor):
 
 
 @pytest.mark.parametrize(
-    "process_executor",
-    [{"target": async_function, "args": (), "kwargs": {"b": "5"}}],
-    indirect=True
+    "process_executor", [{"target": async_function, "args": (), "kwargs": {"b": "5"}}], indirect=True
 )
 def test_launch(process_executor):
     process_executor.start()
@@ -56,9 +52,7 @@ def test_launch(process_executor):
 
 
 @pytest.mark.parametrize(
-    "process_executor",
-    [{"target": async_function, "args": (), "kwargs": {"b": "5"}}],
-    indirect=True
+    "process_executor", [{"target": async_function, "args": (), "kwargs": {"b": "5"}}], indirect=True
 )
 def test_alive(process_executor):
     process_executor.configure(q_size=30, context="spawn", process_name="python_test_process")
@@ -77,9 +71,7 @@ async def task_generator(task: int):
 
 
 @pytest.mark.parametrize(
-    "process_executor",
-    [{"target": async_function, "args": (), "kwargs": {"b": "5"}}],
-    indirect=True
+    "process_executor", [{"target": async_function, "args": (), "kwargs": {"b": "5"}}], indirect=True
 )
 @pytest.mark.asyncio
 async def test_async_target(process_executor):
@@ -106,9 +98,7 @@ async def test_async_target(process_executor):
 
 
 @pytest.mark.parametrize(
-    "process_executor",
-    [{"target": sync_function, "args": (), "kwargs": {"b": "5"}}],
-    indirect=True
+    "process_executor", [{"target": sync_function, "args": (), "kwargs": {"b": "5"}}], indirect=True
 )
 @pytest.mark.asyncio
 async def test_sync_target(process_executor):
@@ -189,9 +179,7 @@ def test_relaunching():
 
 
 @pytest.mark.parametrize(
-    "process_executor",
-    [{"target": async_function, "args": (), "kwargs": {"b": "test"}}],
-    indirect=True
+    "process_executor", [{"target": async_function, "args": (), "kwargs": {"b": "test"}}], indirect=True
 )
 def test_cancel_async(process_executor):
     process_executor.start()
@@ -211,9 +199,7 @@ def test_cancel_async(process_executor):
 
 
 @pytest.mark.parametrize(
-    "process_executor",
-    [{"target": sync_function, "args": (), "kwargs": {"b": "test"}}],
-    indirect=True
+    "process_executor", [{"target": sync_function, "args": (), "kwargs": {"b": "test"}}], indirect=True
 )
 def test_cancel(process_executor):
     process_executor.start()

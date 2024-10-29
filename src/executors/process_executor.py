@@ -11,38 +11,20 @@ from executors.abstract_executor import AbstractExecutor
 
 class ProcessExecutor(AbstractExecutor):
     """
-    Singleton process executor.
+    A process executor.
     Creates a separate process with a <target> function and runs it.
     Accepts tasks and passes them to tasks queue for <target>
     Results are put to result queue.
-
-    Reinitializing allowed by method <reinitialize>
     """
-    _instance = None
-    _allow_reinit = False
+
     _context = "spawn"
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._allow_reinit = True
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
     def __init__(self, target: Callable, *target_args, **target_kwargs):
-        if self._allow_reinit:
-            logger.info(f"{self.__class__.__name__} initializing...")
-            self._process_name = None
-            self._worker = None
-            self._tasks_running = 0
-            super().__init__(target, *target_args, **target_kwargs)
-            self._allow_reinit = False
-
-    @classmethod
-    def get_instance(cls):
-        """
-        Returns an instance of the ProcessExecutor class if exists, None otherwise.
-        """
-        return cls._instance
+        self._process_name = None
+        self._worker = None
+        self._tasks_running = 0
+        super().__init__(target, *target_args, **target_kwargs)
+        self._allow_reinit = False
 
     def configure(self, q_size: int = 500, context: str = "spawn", process_name: str | None = None):
         self._q_size = q_size
@@ -84,15 +66,16 @@ class ProcessExecutor(AbstractExecutor):
             self._task_queue = Queue(maxsize=self._q_size)
             self._result_queue = Queue(maxsize=self._q_size)
             self._stop_event = Event()
-            self._worker = get_context(self._context).Process(target=self._run_target,
-                                                              name=self._process_name,
-                                                              args=(
-                                                                  self._task_queue, self._result_queue,
-                                                                  self._stop_event))
+            self._worker = get_context(self._context).Process(
+                target=self._run_target,
+                name=self._process_name,
+                args=(self._task_queue, self._result_queue, self._stop_event),
+            )
 
             self._worker.start()
             logger.info(
-                f"{self.__class__.__name__} {self._name} q_size={self._q_size}, context={self._context} started")
+                f"{self.__class__.__name__} {self._name} q_size={self._q_size}, context={self._context} started"
+            )
             return
         logger.warning(f"{self.__class__.__name__} {self._name} already running")
 
@@ -113,12 +96,6 @@ class ProcessExecutor(AbstractExecutor):
         if self.is_alive():
             self._worker.join()
         logger.info(f"{self.__class__.__name__} {self._name} stopped")
-
-    def reinitialize(self, target: Callable, *args, **kwargs):
-        if self.is_alive():
-            self.stop()
-        self._allow_reinit = True
-        self.__init__(target, *args, **kwargs)
 
     def n_tasks_running(self) -> int:
         return self._tasks_running

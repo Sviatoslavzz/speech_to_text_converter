@@ -9,8 +9,10 @@ from objects import TranscriptionTask
 @pytest.mark.asyncio
 async def test_transciber_worker_async(saving_path, files, transcriber_worker):
     worker = transcriber_worker
-    tasks = [asyncio.create_task(worker.transcribe(TranscriptionTask(origin_path=saving_path / filename))) for filename
-             in files]
+    tasks = [
+        asyncio.create_task(worker.transcribe(TranscriptionTask(origin_path=saving_path / filename)))
+        for filename in files
+    ]
     results: list[TranscriptionTask] = await asyncio.gather(*tasks)
     for task in results:
         assert task.result is True
@@ -43,7 +45,7 @@ async def example_task(youtube_api_client, youtube_loader, transcriber_worker, l
 @pytest.mark.asyncio
 async def test_e2e_async(saving_path, videos_without_subtitles, youtube_loader, transcriber_worker, youtube_api_client):
     tasks = [
-        asyncio.create_task(example_task(youtube_api_client, youtube_loader, transcriber_worker, link)) \
+        asyncio.create_task(example_task(youtube_api_client, youtube_loader, transcriber_worker, link))
         for link in videos_without_subtitles
     ]
     await asyncio.gather(*tasks)

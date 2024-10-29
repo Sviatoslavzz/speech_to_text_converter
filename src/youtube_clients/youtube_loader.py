@@ -150,7 +150,7 @@ class YouTubeLoader:
                     transcript = transcript_obj.fetch()
                     break
             if (
-                    not transcript and transcript_obj_any and transcript_obj_any.is_translatable
+                not transcript and transcript_obj_any and transcript_obj_any.is_translatable
             ):  # TODO загружает [music]...
                 transcript = transcript_obj_any.translate("en").fetch()
             elif not transcript and transcript_obj_any:

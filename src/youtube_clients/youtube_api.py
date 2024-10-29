@@ -11,6 +11,7 @@ class YouTubeClient:
     Singleton YouTube API client.
     Using official YouTube API libs.
     """
+
     _instance = None
 
     def __new__(cls, *args, **kwargs):

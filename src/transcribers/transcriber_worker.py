@@ -1,4 +1,4 @@
-import asyncio
+from asyncio import get_running_loop, sleep
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
@@ -25,23 +25,18 @@ class TranscriberWorker:
     def __init__(self):
         logger.info(f"{self.__class__.__name__} initializing...")
         self.transcriber = self._TRANSCRIBER(model=self._WHISPER_MODEL)
-        self.semaphore = asyncio.Semaphore(4)  # TODO config
         self.pool = ThreadPoolExecutor(max_workers=4)
 
     @classmethod
     def get_instance(cls):
-        if cls._instance is None:
-            cls._instance = cls()
-
         return cls._instance
 
     @staticmethod
     def _async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         async def wrapper(self, *args, **kwargs):  # ANN202
-            async with self.semaphore:
-                loop = asyncio.get_running_loop()
-                return await loop.run_in_executor(self.pool, lambda: func(self, *args, **kwargs))
+            loop = get_running_loop()
+            return await loop.run_in_executor(self.pool, lambda: func(self, *args, **kwargs))
 
         return wrapper
 
@@ -71,8 +66,7 @@ class TranscriberWorker:
         except NotImplementedError:
             task.result = False
             task.message.available_languages.append("en")
-            task.message.message = {"ru": "Неверное расширение файла",
-                                    "en": "File format is not supported"}
+            task.message.message = {"ru": "Неверное расширение файла", "en": "File format is not supported"}
             return task
 
         task.local_path = task.origin_path.with_suffix(".txt")
@@ -93,4 +87,8 @@ class TranscriberWorker:
 
 async def transcriber_worker_as_target(task: TranscriptionTask) -> TranscriptionTask:
     worker = TranscriberWorker.get_instance()
+    if not worker:
+        worker = TranscriberWorker()
+        await sleep(1)
+
     return await worker.transcribe(task)

@@ -110,6 +110,7 @@ async def test_get_captions_async(youtube_loader, youtube_api_client, youtube_vi
             assert len(file.read()) > 0
         task.local_path.unlink(missing_ok=True)
 
+
 @pytest.mark.skip(reason="Requires manually change the pools size ~4 ~4")
 @pytest.mark.asyncio
 async def test_full_threads_capacity(youtube_loader, youtube_api_client, long_youtube_videos, youtube_videos):

@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 
 from executors.process_executor import ProcessExecutor
 from executors.storage_executor import StorageExecutor
+from executors.transcriber_executor import TranscriberExecutor
 from objects import MB, DownloadTask, TranscriptionTask, YouTubeVideo, get_env, get_save_dir
 from storage.storage_worker import storage_worker_as_target
 from transcribers.transcriber_worker import transcriber_worker_as_target
@@ -12,8 +13,11 @@ from youtube_clients.youtube_loader import YouTubeLoader
 
 
 def get_api_client() -> YouTubeClient:
-    return YouTubeClient(
-        get_env().get("YOUTUBE_API")) if not YouTubeClient.get_instance() else YouTubeClient.get_instance()
+    return (
+        YouTubeClient(get_env().get("YOUTUBE_API"))
+        if not YouTubeClient.get_instance()
+        else YouTubeClient.get_instance()
+    )
 
 
 def get_loader() -> YouTubeLoader:
@@ -92,8 +96,9 @@ async def download_subtitles_worker(task: DownloadTask) -> DownloadTask:
     return await check_file_size(task)
 
 
-async def submit_task(executor: ProcessExecutor,
-                      task_: TranscriptionTask | DownloadTask) -> TranscriptionTask | DownloadTask:
+async def submit_task(
+    executor: ProcessExecutor, task_: TranscriptionTask | DownloadTask
+) -> TranscriptionTask | DownloadTask:
     """
     Transfer a task to executor and waits for the result in a separate thread
     :param executor: ProcessExecutor
@@ -117,9 +122,9 @@ async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[Trans
     and asynchronously wait for results
     Returns: list of TranscriptionTask
     """
-    executor = ProcessExecutor.get_instance()
+    executor = TranscriberExecutor.get_instance()
     if not executor:
-        executor = ProcessExecutor(transcriber_worker_as_target)
+        executor = TranscriberExecutor(transcriber_worker_as_target)
         executor.configure(q_size=300, context="spawn", process_name="python_transcriber_worker")
         executor.set_name("transcriber_worker")
         executor.start()

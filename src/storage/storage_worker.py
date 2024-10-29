@@ -1,6 +1,6 @@
 import time
+from asyncio import sleep
 from dataclasses import dataclass
-from pathlib import Path
 
 from loguru import logger
 
@@ -21,6 +21,7 @@ class StorageWorker:
     Receives storage classes
     Initializes them and fairly distributes files bw them
     """
+
     _instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -64,22 +65,33 @@ class StorageWorker:
     def is_connected(self):
         return self._connected
 
-    async def upload(self, local_path: Path) -> str | None:
+    async def upload(self, task: DownloadTask):
         """
         Checks if any storage has the same file uploaded
         Uploads the file to the most sutable storage
-        :param local_path: path to file
+        :param task: DownloadTask
         :return: storage link | None
         """
+
+        """Check if any storage has the same file uploaded then just return  its link"""
         for storage in self.storages:
-            if local_path.name in storage.cls.list_storage_files():
-                return await storage.cls.upload(local_path)
+            if task.local_path.name in storage.cls.list_storage_files():
+                task.storage_link = await storage.cls.upload(task.local_path)
+                task.local_path.unlink(missing_ok=True)
+                return
 
-        # TODO перенести полный таск сюда и добавить исключения когда больше нет места в хранилище
+        if task.file_size > self.storages[0].space:
+            task.message.message["ru"] = "К сожалению, нет места во внешнем хранилище"
+            task.result = False
+        else:
+            try:
+                task.storage_link = await self.storages[0].cls.upload(task.local_path)
+                task.local_path.unlink(missing_ok=True)
+            except Exception:
+                task.message.message["ru"] = "Не получилось загрузить файл во внешнее хранилище."
+                task.result = False
 
-        link = await self.storages[0].cls.upload(local_path)
-        local_path.unlink(missing_ok=True)  # этого не должно быть в логике upload самого storage класса
-        return link
+        task.local_path.unlink(missing_ok=True)
 
     async def update_space(self):
         """
@@ -107,20 +119,25 @@ async def storage_worker_as_target(task: DownloadTask | None = None) -> Download
     if not sw:
         # TODO вынести отсюда наверх - передавать каждый раз как аргумент
         conf = [
-            DropboxConfig(cls=DropBox,
-                          refresh_token=get_env().get("DROPBOX_REFRESH_TOKEN"),
-                          app_key=get_env().get("DROPBOX_APP_KEY"),
-                          app_secret=get_env().get("DROPBOX_APP_SECRET")),
-            DropboxConfig(cls=DropBox,
-                          refresh_token=get_env().get("DROPBOX_REFRESH_TOKEN_2"),
-                          app_key=get_env().get("DROPBOX_APP_KEY_2"),
-                          app_secret=get_env().get("DROPBOX_APP_SECRET_2")),
+            DropboxConfig(
+                cls=DropBox,
+                refresh_token=get_env().get("DROPBOX_REFRESH_TOKEN"),
+                app_key=get_env().get("DROPBOX_APP_KEY"),
+                app_secret=get_env().get("DROPBOX_APP_SECRET"),
+            ),
+            DropboxConfig(
+                cls=DropBox,
+                refresh_token=get_env().get("DROPBOX_REFRESH_TOKEN_2"),
+                app_key=get_env().get("DROPBOX_APP_KEY_2"),
+                app_secret=get_env().get("DROPBOX_APP_SECRET_2"),
+            ),
         ]
         sw = StorageWorker(conf)
+        await sleep(1)
         await sw.update_space()
 
     if task and task.local_path:
-        task.storage_link = await sw.upload(task.local_path)
+        await sw.upload(task)
         return task
 
     await sw.check_timer()

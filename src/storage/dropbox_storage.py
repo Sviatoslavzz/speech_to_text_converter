@@ -22,6 +22,7 @@ class DropBox:
     Saves files to storage and set timer for keeping it.
     Once timer is out removes file from storage (requires call)
     """
+
     _auth_url = "https://api.dropbox.com/oauth2/token"
 
     def __init__(self, config: DropboxConfig):
@@ -62,15 +63,16 @@ class DropBox:
         """
         if time.time() - self._token_timer > (3 * HOUR + 50 * MINUTE) or not self._connected:
             try:
-                response = requests.post(url=self._auth_url,
-                                         data={
-                                             "refresh_token": self._refresh_token,
-                                             "grant_type": "refresh_token",
-                                             "client_id": self._app_key,
-                                             "client_secret": self._secret
-                                         },
-                                         timeout=5,
-                                         )
+                response = requests.post(
+                    url=self._auth_url,
+                    data={
+                        "refresh_token": self._refresh_token,
+                        "grant_type": "refresh_token",
+                        "client_id": self._app_key,
+                        "client_secret": self._secret,
+                    },
+                    timeout=5,
+                )
                 oauth_result = response.json()
                 self._token = oauth_result.get("access_token")
                 self._token_timer = time.time()
@@ -125,11 +127,13 @@ class DropBox:
             logger.error(f"File already in appkey:{self._app_key} but link is unavailable")
         except Exception as e:
             logger.error(f"An exception occurred uploading to appkey:{self._app_key}, {local_path.name} {e.__repr__()}")
+            raise Exception(f"Unable to upload file: {local_path.name}") from e
 
     def _upload_by_chunks(self, local_path: Path, chunk_size: int = 16 * MB):
         with local_path.open(mode="rb") as f:
-            logger.info(
-                f"Upload session started for appkey:{self._app_key}, {local_path.name}, total size {local_path.stat().st_size / MB:.2f} MB")
+            logger.info(f"""
+            Upload session started for appkey:{self._app_key},
+{local_path.name}, total size {local_path.stat().st_size / MB:.2f} MB""")
             uss_result = self._client.files_upload_session_start(f.read(chunk_size))
             session_id = uss_result.session_id
             cursor = UploadSessionCursor(session_id=session_id, offset=f.tell())
@@ -187,7 +191,7 @@ class DropBox:
             alc = space.allocation
             allocated_space = alc.get_individual().allocated if alc.is_individual() else alc.get_team().allocated
             logger.info(f"appkey:{self._app_key} space: {(allocated_space - space.used) / MB:.2f} MB")
-            return (allocated_space - space.used) / MB
+            return allocated_space - space.used
         except Exception as e:
             logger.error(f"Exception occurred trying to get remaining space. appkey:{self._app_key} {e.__repr__()}")
         return 0

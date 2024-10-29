@@ -15,15 +15,16 @@ SAVING_FOLDER = "saved_files"
 
 def get_env() -> dict[str, str]:
     load_dotenv()
-    return {"YOUTUBE_API": os.getenv("YOUTUBE_API"),
-            "TG_TOKEN": os.getenv("TG_TOKEN"),
-            "DROPBOX_REFRESH_TOKEN": os.getenv("DROPBOX_REFRESH_TOKEN"),
-            "DROPBOX_APP_KEY": os.getenv("DROPBOX_APP_KEY"),
-            "DROPBOX_APP_SECRET": os.getenv("DROPBOX_APP_SECRET"),
-            "DROPBOX_REFRESH_TOKEN_2": os.getenv("DROPBOX_REFRESH_TOKEN_2"),
-            "DROPBOX_APP_KEY_2": os.getenv("DROPBOX_APP_KEY_2"),
-            "DROPBOX_APP_SECRET_2": os.getenv("DROPBOX_APP_SECRET_2"),
-            }
+    return {
+        "YOUTUBE_API": os.getenv("YOUTUBE_API"),
+        "TG_TOKEN": os.getenv("TG_TOKEN"),
+        "DROPBOX_REFRESH_TOKEN": os.getenv("DROPBOX_REFRESH_TOKEN"),
+        "DROPBOX_APP_KEY": os.getenv("DROPBOX_APP_KEY"),
+        "DROPBOX_APP_SECRET": os.getenv("DROPBOX_APP_SECRET"),
+        "DROPBOX_REFRESH_TOKEN_2": os.getenv("DROPBOX_REFRESH_TOKEN_2"),
+        "DROPBOX_APP_KEY_2": os.getenv("DROPBOX_APP_KEY_2"),
+        "DROPBOX_APP_SECRET_2": os.getenv("DROPBOX_APP_SECRET_2"),
+    }
 
 
 def get_save_dir() -> Path:
@@ -73,23 +74,24 @@ class VideoOptions:
 
 
 @dataclass(slots=True)
-class Task:
+class TranscriptionTask:
     id: str
     message: AppMessage = field(default_factory=AppMessage)
     local_path: Path | None = None
     result: bool | None = False
     file_size: int | None = None
-
-
-@dataclass(slots=True)
-class TranscriptionTask(Task):
     origin_path: Path | None = None
 
 
 @dataclass(slots=True)
-class DownloadTask(Task):
-    video: YouTubeVideo | None = None
+class DownloadTask:
+    id: str
+    video: YouTubeVideo
+    message: AppMessage = field(default_factory=AppMessage)
     options: VideoOptions | None = field(default_factory=VideoOptions)
+    local_path: Path | None = None
+    result: bool | None = False
+    file_size: int | None = None
     storage_link: str | None = None
 
 

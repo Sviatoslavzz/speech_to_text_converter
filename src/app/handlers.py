@@ -117,7 +117,8 @@ async def file_receiver(message: Message, state: FSMContext):
         file = message.document
     else:
         logger.warning(
-            f"{message.from_user.username}:{message.chat.id} Received invalid file type: {message.content_type}")
+            f"{message.from_user.username}:{message.chat.id} Received invalid file type: {message.content_type}"
+        )
         await message.answer("Упс, кажется такой файл не подойдет ☹️")
         return
 
@@ -126,12 +127,15 @@ async def file_receiver(message: Message, state: FSMContext):
 
     try:
         file_info = await message.bot.get_file(file.file_id)
-        task = TranscriptionTask(origin_path=get_save_dir() / file.file_name,
-                                 id=f"{message.chat.id}{message.message_id}",
-                                 message=AppMessage())
+        task = TranscriptionTask(
+            origin_path=get_save_dir() / file.file_name,
+            id=f"{message.chat.id}{message.message_id}",
+            message=AppMessage(),
+        )
         await message.bot.download_file(file_info.file_path, destination=task.origin_path)
         logger.info(
-            f"{message.from_user.username}:{message.chat.id} File loaded from tg and saved to\n{task.origin_path}")
+            f"{message.from_user.username}:{message.chat.id} File loaded from tg and saved to\n{task.origin_path}"
+        )
 
         result_tasks = await run_transcriber_executor([task])
 
@@ -159,10 +163,15 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("Принято в работу!")
 
     coroutines = [
-        asyncio.create_task(download_video_worker(DownloadTask(
-            video=video,
-            id=f"{callback.message.chat.id}{callback.message.message_id}",
-        ))) for video in user_state.get("videos", [])
+        asyncio.create_task(
+            download_video_worker(
+                DownloadTask(
+                    video=video,
+                    id=f"{callback.message.chat.id}{callback.message.message_id}",
+                )
+            )
+        )
+        for video in user_state.get("videos", [])
     ]
 
     for complete_task in asyncio.as_completed(coroutines):
@@ -170,19 +179,22 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
         await asyncio.sleep(0.5)
         if result_task.result:
             if result_task.storage_link:
-                await callback.message.answer("Файл оказался велик вот ссылка действует 5 минут")
-                await callback.message.answer(result_task.storage_link,
-                                              link_preview_options=LinkPreviewOptions(is_disabled=True))
+                await callback.message.answer("Прикрепляю ссылку на внешнее хранилище, действует 5 минут")
+                await callback.message.answer(
+                    result_task.storage_link, link_preview_options=LinkPreviewOptions(is_disabled=True)
+                )
                 logger.info(f"{callback.message.chat.id} Link to video file sent")
             else:
                 await callback.message.answer_document(
-                    FSInputFile(path=Path(result_task.local_path),
-                                filename=f"{result_task.video.title}{result_task.local_path.suffix}")
+                    FSInputFile(
+                        path=Path(result_task.local_path),
+                        filename=f"{result_task.video.title}{result_task.local_path.suffix}",
+                    )
                 )
                 logger.info(f"{callback.message.chat.id} Video file sent")
                 result_task.local_path.unlink(missing_ok=True)
         else:
-            await callback.message.answer(f"Не смог скачать видео: {result_task.video.id}")
+            await callback.message.answer(result_task.message.message["ru"])
 
 
 @router.callback_query(F.data == "download_audio", UserRoute.option)
@@ -195,10 +207,15 @@ async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("Принято в работу!")
 
     coroutines = [
-        asyncio.create_task(download_audio_worker(DownloadTask(
-            video=video,
-            id=f"{callback.message.chat.id}{callback.message.message_id}",
-        ))) for video in user_state.get("videos", [])
+        asyncio.create_task(
+            download_audio_worker(
+                DownloadTask(
+                    video=video,
+                    id=f"{callback.message.chat.id}{callback.message.message_id}",
+                )
+            )
+        )
+        for video in user_state.get("videos", [])
     ]
 
     for complete_task in asyncio.as_completed(coroutines):
@@ -206,18 +223,20 @@ async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
         await asyncio.sleep(0.5)
         if result_task.result:
             if result_task.storage_link:
-                await callback.message.answer("Файл оказался велик вот ссылка действует 5 минут")
+                await callback.message.answer("Прикрепляю ссылку на внешнее хранилище, действует 5 минут")
                 await callback.message.answer(result_task.storage_link)
                 logger.info(f"{callback.message.chat.id} Link to audio file sent")
             else:
                 await callback.message.answer_document(
-                    FSInputFile(path=Path(result_task.local_path),
-                                filename=f"{result_task.video.title}{result_task.local_path.suffix}")
+                    FSInputFile(
+                        path=Path(result_task.local_path),
+                        filename=f"{result_task.video.title}{result_task.local_path.suffix}",
+                    )
                 )
                 logger.info(f"{callback.message.chat.id} Audio file sent")
                 result_task.local_path.unlink(missing_ok=True)
         else:
-            await callback.message.answer(f"Не смог скачать аудио для видео: {result_task.video.id}")
+            await callback.message.answer(result_task.message.message["ru"])
 
 
 @router.callback_query(F.data == "download_text", UserRoute.option)
@@ -230,10 +249,15 @@ async def download_text_handler(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("Принято в работу!")
 
     coroutines = [
-        asyncio.create_task(download_subtitles_worker(DownloadTask(
-            video=video,
-            id=f"{callback.message.chat.id}{callback.message.message_id}",
-        ))) for video in user_state.get("videos", [])
+        asyncio.create_task(
+            download_subtitles_worker(
+                DownloadTask(
+                    video=video,
+                    id=f"{callback.message.chat.id}{callback.message.message_id}",
+                )
+            )
+        )
+        for video in user_state.get("videos", [])
     ]
 
     for complete_task in asyncio.as_completed(coroutines):
@@ -241,18 +265,20 @@ async def download_text_handler(callback: CallbackQuery, state: FSMContext):
         await asyncio.sleep(0.5)
         if result_task.result:
             if result_task.storage_link:
-                await callback.message.answer("Файл оказался велик вот ссылка действует 5 минут")
+                await callback.message.answer("Прикрепляю ссылку на внешнее хранилище, действует 5 минут")
                 await callback.message.answer(result_task.storage_link)
                 logger.info(f"{callback.message.chat.id} Link to text file sent")
             else:
                 await callback.message.answer_document(
-                    FSInputFile(path=Path(result_task.local_path),
-                                filename=f"{result_task.video.title}{result_task.local_path.suffix}")
+                    FSInputFile(
+                        path=Path(result_task.local_path),
+                        filename=f"{result_task.video.title}{result_task.local_path.suffix}",
+                    )
                 )
                 logger.info(f"{callback.message.chat.id} Text file sent")
                 result_task.local_path.unlink(missing_ok=True)
         else:
-            await callback.message.answer(f"Не смог скачать субтитры для видео: {result_task.video.id}")
+            await callback.message.answer(result_task.message.message["ru"])
 
 
 @router.message()

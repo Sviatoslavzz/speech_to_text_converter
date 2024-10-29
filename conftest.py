@@ -17,15 +17,16 @@ SAVING_FOLDER = "saved_files"
 @pytest.fixture
 def get_env() -> dict[str, str]:
     load_dotenv()
-    return {"YOUTUBE_API": os.getenv("YOUTUBE_API"),
-            "TG_TOKEN": os.getenv("TG_TOKEN"),
-            "DROPBOX_REFRESH_TOKEN": os.getenv("DROPBOX_REFRESH_TOKEN"),
-            "DROPBOX_APP_KEY": os.getenv("DROPBOX_APP_KEY"),
-            "DROPBOX_APP_SECRET": os.getenv("DROPBOX_APP_SECRET"),
-            "DROPBOX_REFRESH_TOKEN_2": os.getenv("DROPBOX_REFRESH_TOKEN_2"),
-            "DROPBOX_APP_KEY_2": os.getenv("DROPBOX_APP_KEY_2"),
-            "DROPBOX_APP_SECRET_2": os.getenv("DROPBOX_APP_SECRET_2"),
-            }
+    return {
+        "YOUTUBE_API": os.getenv("YOUTUBE_API"),
+        "TG_TOKEN": os.getenv("TG_TOKEN"),
+        "DROPBOX_REFRESH_TOKEN": os.getenv("DROPBOX_REFRESH_TOKEN"),
+        "DROPBOX_APP_KEY": os.getenv("DROPBOX_APP_KEY"),
+        "DROPBOX_APP_SECRET": os.getenv("DROPBOX_APP_SECRET"),
+        "DROPBOX_REFRESH_TOKEN_2": os.getenv("DROPBOX_REFRESH_TOKEN_2"),
+        "DROPBOX_APP_KEY_2": os.getenv("DROPBOX_APP_KEY_2"),
+        "DROPBOX_APP_SECRET_2": os.getenv("DROPBOX_APP_SECRET_2"),
+    }
 
 
 @pytest.fixture
@@ -39,8 +40,9 @@ def saving_path() -> Path:
 
 @pytest.fixture
 def youtube_api_client(get_env):
-    return YouTubeClient(
-        get_env.get("YOUTUBE_API")) if not YouTubeClient.get_instance() else YouTubeClient.get_instance()
+    return (
+        YouTubeClient(get_env.get("YOUTUBE_API")) if not YouTubeClient.get_instance() else YouTubeClient.get_instance()
+    )
 
 
 @pytest.fixture
@@ -70,16 +72,20 @@ def process_executor(request):
 @pytest.fixture
 def dropbox_conf(get_env):
     return [
-        DropboxConfig(cls=DropBox,
-                      storage_time=40,
-                      refresh_token=get_env.get("DROPBOX_REFRESH_TOKEN"),
-                      app_key=get_env.get("DROPBOX_APP_KEY"),
-                      app_secret=get_env.get("DROPBOX_APP_SECRET")),
-        DropboxConfig(cls=DropBox,
-                      storage_time=40,
-                      refresh_token=get_env.get("DROPBOX_REFRESH_TOKEN_2"),
-                      app_key=get_env.get("DROPBOX_APP_KEY_2"),
-                      app_secret=get_env.get("DROPBOX_APP_SECRET_2")),
+        DropboxConfig(
+            cls=DropBox,
+            storage_time=40,
+            refresh_token=get_env.get("DROPBOX_REFRESH_TOKEN"),
+            app_key=get_env.get("DROPBOX_APP_KEY"),
+            app_secret=get_env.get("DROPBOX_APP_SECRET"),
+        ),
+        DropboxConfig(
+            cls=DropBox,
+            storage_time=40,
+            refresh_token=get_env.get("DROPBOX_REFRESH_TOKEN_2"),
+            app_key=get_env.get("DROPBOX_APP_KEY_2"),
+            app_secret=get_env.get("DROPBOX_APP_SECRET_2"),
+        ),
     ]
 
 
