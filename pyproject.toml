@@ -101,6 +101,9 @@ convention = "google"
 "tests/*" = ["S101", "ANN001", "ANN201", "PLR2004", "INP001"]
 "conftest.py" = ["S101", "ANN001", "ANN201"]
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"

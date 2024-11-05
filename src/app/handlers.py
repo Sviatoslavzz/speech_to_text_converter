@@ -25,6 +25,7 @@ from workers import (
     download_subtitles_worker,
     download_video_worker,
     get_channel_videos,
+    launch_coroutines,
     run_transcriber_executor,
 )
 
@@ -46,7 +47,10 @@ async def command_help_handler(message: Message):
     Receives messages with `/help` command
     """
     logger.info(f"{message.from_user.username}:{message.chat.id} Got a /HELP command")
-    await message.answer("За помощью лучше обращаться к chat GPT 🤷‍♂️")
+    sent = await message.answer("За помощью лучше обращаться к chat GPT 🤷‍♂️")
+    await asyncio.sleep(5)
+    await message.delete()
+    await sent.delete()
 
 
 @router.message(F.text == choose_video_button)
@@ -153,6 +157,31 @@ async def file_receiver(message: Message, state: FSMContext):
         await message.answer("Упс, что-то пошло не так!")
 
 
+async def task_completion_loop(coroutines: list, callback: CallbackQuery):
+    for complete_task in asyncio.as_completed(coroutines):
+        result_task: DownloadTask = await complete_task
+        await asyncio.sleep(0.5)
+        if result_task.result:
+            if result_task.storage_link:
+                await callback.message.answer(
+                    f"""💥 Видео: {result_task.video.title}
+Прикрепляю ссылку на внешнее хранилище, действует 5 минут\n{result_task.storage_link}""",
+                    link_preview_options=LinkPreviewOptions(is_disabled=True),
+                )
+                logger.info(f"{callback.message.chat.id} Link to file sent")
+            else:
+                await callback.message.answer_document(
+                    FSInputFile(
+                        path=Path(result_task.local_path),
+                        filename=f"{result_task.video.title}{result_task.local_path.suffix}",
+                    )
+                )
+                logger.info(f"{callback.message.chat.id} file sent")
+                result_task.local_path.unlink(missing_ok=True)
+        else:
+            await callback.message.answer(result_task.message.message["ru"])
+
+
 @router.callback_query(F.data == "download_video", UserRoute.option)
 async def download_video_handler(callback: CallbackQuery, state: FSMContext):
     logger.info(f"{callback.from_user.username}:{callback.message.chat.id} Received callback, download_video")
@@ -162,39 +191,13 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer("Принято в работу!")
 
-    coroutines = [
-        asyncio.create_task(
-            download_video_worker(
-                DownloadTask(
-                    video=video,
-                    id=f"{callback.message.chat.id}{callback.message.message_id}",
-                )
-            )
-        )
-        for video in user_state.get("videos", [])
-    ]
+    coroutines = launch_coroutines(
+        async_worker=download_video_worker,
+        id_=f"{callback.message.chat.id}{callback.message.message_id}",
+        videos=user_state.get("videos", []),
+    )
 
-    for complete_task in asyncio.as_completed(coroutines):
-        result_task: DownloadTask = await complete_task
-        await asyncio.sleep(0.5)
-        if result_task.result:
-            if result_task.storage_link:
-                await callback.message.answer("Прикрепляю ссылку на внешнее хранилище, действует 5 минут")
-                await callback.message.answer(
-                    result_task.storage_link, link_preview_options=LinkPreviewOptions(is_disabled=True)
-                )
-                logger.info(f"{callback.message.chat.id} Link to video file sent")
-            else:
-                await callback.message.answer_document(
-                    FSInputFile(
-                        path=Path(result_task.local_path),
-                        filename=f"{result_task.video.title}{result_task.local_path.suffix}",
-                    )
-                )
-                logger.info(f"{callback.message.chat.id} Video file sent")
-                result_task.local_path.unlink(missing_ok=True)
-        else:
-            await callback.message.answer(result_task.message.message["ru"])
+    await task_completion_loop(coroutines, callback)
 
 
 @router.callback_query(F.data == "download_audio", UserRoute.option)
@@ -206,37 +209,13 @@ async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer("Принято в работу!")
 
-    coroutines = [
-        asyncio.create_task(
-            download_audio_worker(
-                DownloadTask(
-                    video=video,
-                    id=f"{callback.message.chat.id}{callback.message.message_id}",
-                )
-            )
-        )
-        for video in user_state.get("videos", [])
-    ]
+    coroutines = launch_coroutines(
+        async_worker=download_audio_worker,
+        id_=f"{callback.message.chat.id}{callback.message.message_id}",
+        videos=user_state.get("videos", []),
+    )
 
-    for complete_task in asyncio.as_completed(coroutines):
-        result_task: DownloadTask = await complete_task
-        await asyncio.sleep(0.5)
-        if result_task.result:
-            if result_task.storage_link:
-                await callback.message.answer("Прикрепляю ссылку на внешнее хранилище, действует 5 минут")
-                await callback.message.answer(result_task.storage_link)
-                logger.info(f"{callback.message.chat.id} Link to audio file sent")
-            else:
-                await callback.message.answer_document(
-                    FSInputFile(
-                        path=Path(result_task.local_path),
-                        filename=f"{result_task.video.title}{result_task.local_path.suffix}",
-                    )
-                )
-                logger.info(f"{callback.message.chat.id} Audio file sent")
-                result_task.local_path.unlink(missing_ok=True)
-        else:
-            await callback.message.answer(result_task.message.message["ru"])
+    await task_completion_loop(coroutines, callback)
 
 
 @router.callback_query(F.data == "download_text", UserRoute.option)
@@ -248,37 +227,13 @@ async def download_text_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer("Принято в работу!")
 
-    coroutines = [
-        asyncio.create_task(
-            download_subtitles_worker(
-                DownloadTask(
-                    video=video,
-                    id=f"{callback.message.chat.id}{callback.message.message_id}",
-                )
-            )
-        )
-        for video in user_state.get("videos", [])
-    ]
+    coroutines = launch_coroutines(
+        async_worker=download_subtitles_worker,
+        id_=f"{callback.message.chat.id}{callback.message.message_id}",
+        videos=user_state.get("videos", []),
+    )
 
-    for complete_task in asyncio.as_completed(coroutines):
-        result_task: DownloadTask = await complete_task
-        await asyncio.sleep(0.5)
-        if result_task.result:
-            if result_task.storage_link:
-                await callback.message.answer("Прикрепляю ссылку на внешнее хранилище, действует 5 минут")
-                await callback.message.answer(result_task.storage_link)
-                logger.info(f"{callback.message.chat.id} Link to text file sent")
-            else:
-                await callback.message.answer_document(
-                    FSInputFile(
-                        path=Path(result_task.local_path),
-                        filename=f"{result_task.video.title}{result_task.local_path.suffix}",
-                    )
-                )
-                logger.info(f"{callback.message.chat.id} Text file sent")
-                result_task.local_path.unlink(missing_ok=True)
-        else:
-            await callback.message.answer(result_task.message.message["ru"])
+    await task_completion_loop(coroutines, callback)
 
 
 @router.message()

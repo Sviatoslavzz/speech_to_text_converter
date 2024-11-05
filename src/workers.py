@@ -1,6 +1,6 @@
 import asyncio
 import re
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 
 from executors.process_executor import ProcessExecutor
 from executors.storage_executor import StorageExecutor
@@ -10,6 +10,20 @@ from storage.storage_worker import storage_worker_as_target
 from transcribers.transcriber_worker import transcriber_worker_as_target
 from youtube_clients.youtube_api import YouTubeClient
 from youtube_clients.youtube_loader import YouTubeLoader
+
+
+def launch_coroutines(async_worker: Callable, id_: str, videos: list):
+    return [
+        asyncio.create_task(
+            async_worker(
+                DownloadTask(
+                    video=video,
+                    id=id_,
+                )
+            )
+        )
+        for video in videos
+    ]
 
 
 def get_api_client() -> YouTubeClient:
