@@ -1,4 +1,5 @@
 import asyncio
+import platform
 import re
 from collections.abc import AsyncGenerator, Callable
 
@@ -10,6 +11,8 @@ from storage.storage_worker import storage_worker_as_target
 from transcribers.transcriber_worker import transcriber_worker_as_target
 from youtube_clients.youtube_api import YouTubeClient
 from youtube_clients.youtube_loader import YouTubeLoader
+
+IS_MACOS = platform.system() == "Darwin"
 
 
 def launch_coroutines(async_worker: Callable, id_: str, videos: list):
@@ -139,7 +142,9 @@ async def run_transcriber_executor(tasks: list[TranscriptionTask]) -> list[Trans
     executor = TranscriberExecutor.get_instance()
     if not executor:
         executor = TranscriberExecutor(transcriber_worker_as_target)
-        executor.configure(q_size=300, context="spawn", process_name="python_transcriber_worker")
+        executor.configure(
+            q_size=300, context="spawn" if IS_MACOS else "fork", process_name="python_transcriber_worker"
+        )
         executor.set_name("transcriber_worker")
         executor.start()
 
@@ -159,7 +164,7 @@ async def run_storage_executor(tasks: list[DownloadTask]) -> list[DownloadTask]:
     executor = StorageExecutor.get_instance()
     if not executor:
         executor = StorageExecutor(storage_worker_as_target)
-        executor.configure(q_size=500, context="spawn", process_name="python_storage_worker")
+        executor.configure(q_size=500, context="spawn" if IS_MACOS else "fork", process_name="python_storage_worker")
         executor.set_name("storage_worker")
         executor.start()
 
