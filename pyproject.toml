@@ -1,6 +1,6 @@
 [project]
 name = "youtube_loader_service"
-version = "1.4.1"
+version = "1.4.2"
 description = "service is capable of download audio/video/text by youtube video/channel link and transcribe in case transcript is missing"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
