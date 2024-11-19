@@ -31,4 +31,4 @@ format:
 
 clean:
 	@echo "🧹🧹🧹 perfect"
-	@rm -rf *.egg_info __pycache__ build/
+	@rm -rf src/*.egg-info *.egg_info __pycache__ build/

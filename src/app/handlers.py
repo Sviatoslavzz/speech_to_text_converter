@@ -5,7 +5,6 @@ from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions, Message
-from google.api_core.exceptions import BadRequest
 from loguru import logger
 
 from app.keyboards import main_menu, options_menu
@@ -130,15 +129,16 @@ async def file_receiver(message: Message, state: FSMContext):
     await message.answer("Принято в работу!")
 
     try:
-        file_info = await message.bot.get_file(file.file_id)
+        file_info = await message.bot.get_file(file.file_id) # если локально - то ждет полной загрузки
+        # TODO сейчас настроил только для локального сервера - подумать как можно динамически подстраиваться
+        # task = TranscriptionTask(
+        #     origin_path=get_save_dir() / file.file_name,
+        #     id=f"{message.chat.id}{message.message_id}"
+        # )
+        # await message.bot.download_file(file_info.file_path, destination=task.origin_path)
         task = TranscriptionTask(
-            origin_path=get_save_dir() / file.file_name,
+            origin_path=Path(file_info.file_path),
             id=f"{message.chat.id}{message.message_id}",
-            message=AppMessage(),
-        )
-        await message.bot.download_file(file_info.file_path, destination=task.origin_path)
-        logger.info(
-            f"{message.from_user.username}:{message.chat.id} File loaded from tg and saved to\n{task.origin_path}"
         )
 
         result_tasks = await run_transcriber_executor([task])
@@ -150,10 +150,9 @@ async def file_receiver(message: Message, state: FSMContext):
                 r_task.origin_path.unlink(missing_ok=True)
                 r_task.local_path.unlink(missing_ok=True)
             else:
-                logger.debug(f"Transcription failed, got message {r_task.message.message["ru"]}")
                 await message.answer("К сожалению, что-то пошло не так и я не смог сделать транскрибацию 😓")
-    except BadRequest:
-        logger.error(f"{message.from_user.username}:{message.chat.id} Failed to load file from tg")
+    except Exception as e:
+        logger.error(f"{message.from_user.username}:{message.chat.id} Failed to load file from server {e.__repr__()}")
         await message.answer("Упс, что-то пошло не так!")
 
 

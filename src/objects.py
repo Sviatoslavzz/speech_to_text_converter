@@ -17,7 +17,8 @@ def get_env() -> dict[str, str]:
     load_dotenv()
     return {
         "YOUTUBE_API": os.getenv("YOUTUBE_API"),
-        "TG_TOKEN": os.getenv("TG_TOKEN"),
+        "TG_BOT_TOKEN": os.getenv("TG_BOT_TOKEN"),
+        "LOCAL_BOT_TOKEN": os.getenv("LOCAL_BOT_TOKEN"),
         "DROPBOX_REFRESH_TOKEN": os.getenv("DROPBOX_REFRESH_TOKEN"),
         "DROPBOX_APP_KEY": os.getenv("DROPBOX_APP_KEY"),
         "DROPBOX_APP_SECRET": os.getenv("DROPBOX_APP_SECRET"),
@@ -65,9 +66,10 @@ class AppMessage:
     available_languages: list[str] = field(default_factory=lambda: ["ru"])
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class VideoOptions:
     extension: str = "mp4"
+    width: int = 1280
     height: int = 720
     fps: int = 30
     language: str = "ru"

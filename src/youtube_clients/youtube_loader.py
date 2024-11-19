@@ -1,16 +1,15 @@
 import asyncio
 import copy
-from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yt_dlp
 from loguru import logger
 from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled, YouTubeTranscriptApi
 
-from objects import DownloadTask
+from objects import DownloadTask, VideoOptions
 
 
 class YouTubeLoader:
@@ -23,6 +22,8 @@ class YouTubeLoader:
     _instance = None
     __config: dict[str, Any] = {
         "quiet": True,
+        'socket_timeout': 5,
+        # "proxy": "http://185.65.202.154:3128"
     }
 
     def __new__(cls, *args, **kwargs):
@@ -60,34 +61,68 @@ class YouTubeLoader:
         return new_title.strip("_").lower()
 
     @staticmethod
-    def _async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
+    def __async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         async def wrapper(self, *args, **kwargs):  # ANN202
             loop = asyncio.get_running_loop()
-            if func.__name__ == "get_captions":
+            if func.__name__ in ["get_captions", "get_video_options"]:
                 return await loop.run_in_executor(self.pool_light, lambda: func(self, *args, **kwargs))
             return await loop.run_in_executor(self.pool_heavy, lambda: func(self, *args, **kwargs))
 
         return wrapper
 
-    @_async_wrap
-    def download_audio(self, task: DownloadTask) -> DownloadTask:
+    @__async_wrap
+    def get_video_options(self, link: str) -> list[VideoOptions]:
+        """
+        Loads and sorts all available video formats with the highest vbr (video bitrate).
+        :param link: YouTube video link
+        :return: list of video options or empty list
+        """
+        resolution_dict = {}
+        try:
+            with yt_dlp.YoutubeDL(self.__config) as ydl:
+                info_dict = ydl.extract_info(link, download=False)
+                formats = info_dict.get('formats', [])
+                for f in formats:
+                    if f.get("downloader_options") and f.get("fps") and f.get('width') \
+                            and f.get('height') and f.get("ext") == "mp4" and f.get('vbr'):
+                        cur_key = VideoOptions(width=f.get('width'), height=f.get('height'), fps=f.get('fps'))
+                        if resolution_dict.get(cur_key) and resolution_dict[cur_key] < f.get('vbr'):
+                            resolution_dict[cur_key] = f.get('vbr')
+                        else:
+                            resolution_dict[cur_key] = f.get('vbr')
+                logger.info(f"Successfully got options for video {link}")
+        except Exception as e:
+            logger.error(f"Exception during extracting video info: {e.__repr__()}")
+
+        return list(resolution_dict)
+
+    @__async_wrap
+    def download_audio(self, task: DownloadTask,
+                       format_: str = "mp3",
+                       quality: str = "best",
+                       yt_dlp_config: dict | None = None) -> DownloadTask:
         """
         Downloads audio from the YouTube video.
+        :param quality: best | worst
+        :param format_: mp3 or m4a
+        :param yt_dlp_config: optional configuration for YoutubeDL
         :param task: DownloadTask
-        :return: filled DownloadTask
+        :return: updated DownloadTask
         """
         title = f"{task.id}{self.prepare_title(task.video.title)}"
-        config = copy.deepcopy(self.__config)
-        config["postprocessors"] = [
-            {
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": "mp3",
-                "preferredquality": "192",
-            }
-        ]
-        ext = config["postprocessors"][0]["preferredcodec"]
-        config["format"] = "bestaudio[ext=m4a]/best"
+        config = yt_dlp_config if yt_dlp_config else copy.deepcopy(self.__config)
+        ext = format_
+        if format_ == "mp3":
+            config["postprocessors"] = [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "192",
+                }
+            ]
+            ext = config["postprocessors"][0]["preferredcodec"]
+        config["format"] = f"{quality}audio[ext=m4a]/{quality}"
         config["outtmpl"] = f"{self.dir}/{title}.%(ext)s"
         try:
             with yt_dlp.YoutubeDL(config) as ydl:
@@ -96,34 +131,36 @@ class YouTubeLoader:
                 task.local_path = Path(f"{self.dir}/{title}.{ext}")
                 task.file_size = task.local_path.stat().st_size
                 logger.info(f"{task.id} Audio downloaded to {self.dir}/{title}.{ext}")
-        except yt_dlp.utils.DownloadError:
-            logger.error(f"{task.id} Exception during audio download for video id: {task.video.id}")
+        except Exception as e:
+            logger.error(f"{task.id} Exception during audio download for video id: {task.video.id} {e.__repr__()}")
             task.message.message["ru"] = "Произошла ошибка при скачивании аудио файла"
             task.result = False
 
         return task
 
-    @_async_wrap
-    def download_video(self, task: DownloadTask) -> DownloadTask:
+    @__async_wrap
+    def download_video(self, task: DownloadTask, yt_dlp_config: dict | None = None) -> DownloadTask:
         """
         Downloads video from the YouTube video.
+        Fills task with a path, result, message.
+        :param yt_dlp_config: optional configuration for YoutubeDL
         :param task: DownloadTask
-        :return: filled DownloadTask
         """
         title = f"{task.id}{self.prepare_title(task.video.title)}"
-        config = copy.deepcopy(self.__config)
+        config = yt_dlp_config if yt_dlp_config else copy.deepcopy(self.__config)
         config["outtmpl"] = f"{self.dir}/{title}.%(ext)s"
         config["format"] = (
-            f"bestvideo[height<={task.options.height}][ext={task.options.extension}][fps<={task.options.fps}]+bestaudio[ext=m4a]/worst"
+            f"""bestvideo[height<={task.options.height}][width<={task.options.width}][ext={task.options.extension}]
+[fps<={task.options.fps}]+bestaudio[ext=m4a]/worst"""
         )
 
         try:
             with yt_dlp.YoutubeDL(config) as ydl:
                 ydl.download([task.video.link])
-                logger.info(f"{task.id} Video downloaded to {self.dir}/{title}.{task.options.extension}")
                 task.local_path = Path(f"{self.dir}/{title}.{task.options.extension}")
                 task.file_size = task.local_path.stat().st_size
                 task.result = True
+                logger.info(f"{task.id} Video downloaded to {self.dir}/{title}.{task.options.extension}")
         except Exception as e:
             logger.error(f"{task.id} Exception during video download for video id: {task.video.id}, {e.__repr__()}")
             task.message.message["ru"] = "Произошла ошибка при скачивании видео файла"
@@ -131,7 +168,7 @@ class YouTubeLoader:
 
         return task
 
-    @_async_wrap
+    @__async_wrap
     def get_captions(self, task: DownloadTask) -> DownloadTask:
         """
         Downloads captions from the YouTube video.
@@ -150,7 +187,7 @@ class YouTubeLoader:
                     transcript = transcript_obj.fetch()
                     break
             if (
-                not transcript and transcript_obj_any and transcript_obj_any.is_translatable
+                    not transcript and transcript_obj_any and transcript_obj_any.is_translatable
             ):  # TODO загружает [music]...
                 transcript = transcript_obj_any.translate("en").fetch()
             elif not transcript and transcript_obj_any:

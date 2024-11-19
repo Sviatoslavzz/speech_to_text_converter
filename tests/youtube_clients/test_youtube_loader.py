@@ -1,8 +1,7 @@
 import asyncio
+import subprocess
 from pathlib import Path
-
 import pytest
-
 from objects import DownloadTask, VideoOptions
 
 
@@ -21,11 +20,25 @@ async def test_download_audio(youtube_loader, youtube_api_client, youtube_videos
     client = youtube_loader
     for link in youtube_videos_for_load:
         video = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
-        task = await client.download_audio(DownloadTask(id=video.id, video=video))
+        task = await client.download_audio(DownloadTask(id=video.id, video=video), format_="m4a", quality="worst")
         assert task.result
         assert isinstance(task.local_path, Path)
-        assert task.local_path.suffix == ".mp3"
+        assert task.local_path.suffix == ".m4a"
         task.local_path.unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
+async def test_download_timeout(youtube_loader, youtube_api_client, youtube_videos_for_load):
+    await asyncio.sleep(1)
+    client = youtube_loader
+    conf = {"quiet": True,
+            'socket_timeout': 5,
+            "proxy": "http://1.1.2.2:3132"}
+    for link in youtube_videos_for_load:
+        video = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
+        task = await client.download_audio(DownloadTask(id=video.id, video=video), yt_dlp_config=conf)
+        assert not task.result
+        break
 
 
 @pytest.mark.asyncio
@@ -53,7 +66,8 @@ async def test_download_video(youtube_loader, youtube_api_client, youtube_videos
     client = youtube_loader
     for link in youtube_videos_for_load:
         video = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
-        task = await client.download_video(DownloadTask(id=video.id, video=video, options=VideoOptions(height=480)))
+        task = DownloadTask(id=video.id, video=video, options=VideoOptions(height=480))
+        await client.download_video(task)
         assert task.result is True
         assert isinstance(task.local_path, Path)
         assert task.local_path.suffix == ".mp4"
@@ -67,8 +81,9 @@ async def test_download_video_async(youtube_loader, youtube_api_client, youtube_
     client = youtube_loader
     for link in youtube_videos_for_load:
         video = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
-        tasks.append(asyncio.create_task(client.download_video(DownloadTask(id=video.id, video=video))))
-
+        task = DownloadTask(id=video.id, video=video)
+        tasks.append(asyncio.create_task(client.download_video(task)))
+    # TODO может все таки возвращать ссылку на таск - так можно будет работать с результатами coro | task
     results: list[DownloadTask] = await asyncio.gather(*tasks, return_exceptions=True)
     for task in results:
         assert task.result
@@ -79,6 +94,7 @@ async def test_download_video_async(youtube_loader, youtube_api_client, youtube_
 
 @pytest.mark.asyncio
 async def test_get_captions(youtube_loader, youtube_api_client, youtube_videos, youtube_only_shorts):
+    await asyncio.sleep(1)
     for link in youtube_videos + youtube_only_shorts:
         video = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
         res_task: DownloadTask = await youtube_loader.get_captions(DownloadTask(id=video.id, video=video))
@@ -90,6 +106,7 @@ async def test_get_captions(youtube_loader, youtube_api_client, youtube_videos, 
 
 @pytest.mark.asyncio
 async def test_get_captions_wrong(youtube_loader, youtube_api_client, youtube_music):
+    await asyncio.sleep(1)
     for link in youtube_music:
         video = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
         res_task: DownloadTask = await youtube_loader.get_captions(DownloadTask(id=video.id, video=video))
@@ -98,6 +115,7 @@ async def test_get_captions_wrong(youtube_loader, youtube_api_client, youtube_mu
 
 @pytest.mark.asyncio
 async def test_get_captions_async(youtube_loader, youtube_api_client, youtube_videos, youtube_only_shorts):
+    await asyncio.sleep(1)
     tasks = []
     for link in youtube_videos + youtube_only_shorts:
         video = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
@@ -130,3 +148,37 @@ async def test_full_threads_capacity(youtube_loader, youtube_api_client, long_yo
     for task in results:
         assert task.result is True
         task.local_path.unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
+async def test_get_options(youtube_loader, youtube_videos):
+    for link in youtube_videos:
+        options = await youtube_loader.get_video_options(link)
+        assert len(options) > 0
+
+
+@pytest.mark.ffmpeg
+@pytest.mark.asyncio
+async def test_get_options_load(youtube_loader, youtube_api_client):
+    """
+    Tests that the video downloaded exactly with the options provided.
+    """
+    video = await youtube_api_client.get_video_by_id(
+        youtube_api_client.get_video_id("https://www.youtube.com/watch?v=NiHSj6KSMMo"))
+    task: DownloadTask = DownloadTask(
+        id="id132",
+        video=video,
+    )
+    options: list[VideoOptions] = await youtube_loader.get_video_options(video.link)
+    for option in options:
+        if option.height == 240 and option.width == 426 and option.fps == 30:
+            task.options = option
+            await youtube_loader.download_video(task)
+            break
+
+    result = subprocess.run(f"ffmpeg -i {task.local_path}", shell=True, capture_output=True, text=True)
+
+    assert "426x240" in result.stderr
+    assert "30 fps" in result.stderr
+
+    task.local_path.unlink(missing_ok=True)

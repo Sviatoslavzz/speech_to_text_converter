@@ -159,6 +159,10 @@ class YouTubeClient:
         return None
 
     async def get_video_by_id(self, id_: str) -> YouTubeVideo | None:
+        """
+        :param id_: youtube video id
+        :return: YouTubeVideo instance
+        """
         return await self._form_object_from_video(id_)
 
     async def _form_object_from_video(self, video_id: str) -> YouTubeVideo | None:

@@ -1,6 +1,8 @@
 import asyncio
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from loguru import logger
 
 from app.handlers import router
@@ -8,10 +10,22 @@ from objects import get_env
 
 
 async def main() -> None:
-    bot = Bot(token=get_env().get("TG_TOKEN"))
+    local_server = TelegramAPIServer.from_base('http://localhost:9090')
+    session = AiohttpSession(api=local_server)
+    bot = Bot(token=get_env().get("LOCAL_BOT_TOKEN"), session=session)
+    # await bot.log_out()
+    # await bot.delete_webhook(drop_pending_updates=True)
     dp = Dispatcher()
     dp.include_router(router)
-    await dp.start_polling(bot)
+    try:
+        logger.info("Starting bot polling...")
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.error(f"Failed to start polling: {e.__repr__()}")
+        raise e
+    finally:
+        await bot.session.close()
+        logger.info("Bot session closed.")
 
 
 if __name__ == "__main__":
