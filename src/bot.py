@@ -1,8 +1,9 @@
 import asyncio
 
 from aiogram import Bot, Dispatcher
-from aiogram.client.session.aiohttp import AiohttpSession
-from aiogram.client.telegram import TelegramAPIServer
+
+# from aiogram.client.session.aiohttp import AiohttpSession
+# from aiogram.client.telegram import TelegramAPIServer
 from loguru import logger
 
 from app.handlers import router
@@ -10,9 +11,9 @@ from objects import get_env
 
 
 async def main() -> None:
-    local_server = TelegramAPIServer.from_base('http://localhost:9090')
-    session = AiohttpSession(api=local_server)
-    bot = Bot(token=get_env().get("LOCAL_BOT_TOKEN"), session=session)
+    # local_server = TelegramAPIServer.from_base('http://localhost:9090')
+    # session = AiohttpSession(api=local_server)
+    bot = Bot(token=get_env().get("TG_BOT_TOKEN"))
     # await bot.log_out()
     # await bot.delete_webhook(drop_pending_updates=True)
     dp = Dispatcher()

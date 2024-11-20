@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions, Message
 from loguru import logger
 
-from app.keyboards import main_menu, options_menu
+from app.keyboards import generate_option_keyboard, main_menu, options_menu, proceed_simple_menu, video_options_menu
 from app.replies import (
     choose_channel_button,
     choose_file_button,
@@ -17,14 +17,22 @@ from app.replies import (
     provide_links,
     welcome_message,
 )
-from objects import AppMessage, DownloadOptions, DownloadTask, TranscriptionTask, UserRoute, YouTubeVideo, get_save_dir
+from objects import (
+    DownloadOptions,
+    DownloadTask,
+    TranscriptionTask,
+    UserRoute,
+    YouTubeVideo,
+)
 from workers import (
     convert_links_to_videos,
     download_audio_worker,
     download_subtitles_worker,
     download_video_worker,
     get_channel_videos,
+    get_video_options,
     launch_coroutines,
+    remove_file,
     run_transcriber_executor,
 )
 
@@ -101,7 +109,7 @@ async def video_handler_links(message: Message, state: FSMContext):
 
     if videos:
         await state.update_data(videos=videos)
-        await state.set_state(UserRoute.option)
+        await state.set_state(UserRoute.action)
         await message.answer("Тогда выбирай действие 🏄‍♂️", reply_markup=options_menu)
     else:
         await message.answer("Попробуем еще раз?")
@@ -129,7 +137,7 @@ async def file_receiver(message: Message, state: FSMContext):
     await message.answer("Принято в работу!")
 
     try:
-        file_info = await message.bot.get_file(file.file_id) # если локально - то ждет полной загрузки
+        file_info = await message.bot.get_file(file.file_id)  # если локально - то ждет полной загрузки
         # TODO сейчас настроил только для локального сервера - подумать как можно динамически подстраиваться
         # task = TranscriptionTask(
         #     origin_path=get_save_dir() / file.file_name,
@@ -147,8 +155,8 @@ async def file_receiver(message: Message, state: FSMContext):
             if r_task.result:
                 await message.answer_document(FSInputFile(r_task.local_path))
                 logger.info(f"{message.chat.id} Text file sent")
-                r_task.origin_path.unlink(missing_ok=True)
-                r_task.local_path.unlink(missing_ok=True)
+                remove_file(r_task.origin_path)
+                remove_file(r_task.local_path)
             else:
                 await message.answer("К сожалению, что-то пошло не так и я не смог сделать транскрибацию 😓")
     except Exception as e:
@@ -176,27 +184,65 @@ async def task_completion_loop(coroutines: list, callback: CallbackQuery):
                     )
                 )
                 logger.info(f"{callback.message.chat.id} file sent")
-                result_task.local_path.unlink(missing_ok=True)
+                remove_file(result_task.local_path)
         else:
             await callback.message.answer(result_task.message.message["ru"])
 
 
-@router.callback_query(F.data == "download_video", UserRoute.option)
+@router.callback_query(F.data == "download_video", UserRoute.action)
+async def video_options_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer("Как предпочитаешь выбирать качество видео?", reply_markup=video_options_menu)
+    await state.set_state(UserRoute.load_options)
+
+
+@router.callback_query(UserRoute.load_options)
 async def download_video_handler(callback: CallbackQuery, state: FSMContext):
     logger.info(f"{callback.from_user.username}:{callback.message.chat.id} Received callback, download_video")
-    await state.update_data(action=DownloadOptions.VIDEO)
     user_state = await state.get_data()
-    await state.clear()
-    await callback.answer("🚀", show_alert=False)
-    await callback.message.answer("Принято в работу!")
+    # await state.clear()
+    # await callback.answer("🚀", show_alert=False)
+    # await callback.message.answer("Принято в работу!")
 
-    coroutines = launch_coroutines(
-        async_worker=download_video_worker,
-        id_=f"{callback.message.chat.id}{callback.message.message_id}",
-        videos=user_state.get("videos", []),
-    )
+    videos = user_state.get("videos", [])
+    if callback.data == "single_option":
+        if videos:
+            options = await get_video_options(videos[0])
+            await callback.message.answer(f"Доступные опции для видео {videos[0].title}",
+                                          reply_markup=generate_option_keyboard(options))
+            await state.update_data(video_options=options)
+            await state.set_state(UserRoute.video_options)
+    elif callback.data == "multi_option":
+        pass
+    elif callback.data == "cancel":
+        await callback.message.answer("Галя, у нас отмена!")
+        await state.clear()
+    # coroutines = launch_coroutines(
+    #     async_worker=download_video_worker,
+    #     id_=f"{callback.message.chat.id}{callback.message.message_id}",
+    #     videos=user_state.get("videos", []),
+    # )
+    #
+    # await task_completion_loop(coroutines, callback)
 
-    await task_completion_loop(coroutines, callback)
+
+@router.callback_query(UserRoute.video_options)
+async def download_single_video_with_option(callback: CallbackQuery, state: FSMContext):
+    user_state = await state.get_data()
+    async_task = asyncio.create_task(
+        download_video_worker(DownloadTask(id=f"{callback.message.chat.id}{callback.message.message_id}",
+                                           video=user_state["videos"].pop(0),
+                                           options=next(filter(lambda x: x.__str__() == callback.data,
+                                                               user_state.get("video_options", []))))))
+
+    await task_completion_loop([async_task], callback)
+
+    await state.update_data(videos=user_state.get("videos"))
+    await state.set_state(UserRoute.load_options)
+    if user_state.get("videos", None):
+        await callback.message.answer("Продолжаем?", reply_markup=proceed_simple_menu)
+    else:
+        await callback.message.answer("Мы скачали все видео")
+        await state.clear()
 
 
 @router.callback_query(F.data == "download_audio", UserRoute.option)

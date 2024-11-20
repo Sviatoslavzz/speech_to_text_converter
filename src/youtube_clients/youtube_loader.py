@@ -1,9 +1,10 @@
 import asyncio
 import copy
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import yt_dlp
 from loguru import logger
@@ -22,7 +23,7 @@ class YouTubeLoader:
     _instance = None
     __config: dict[str, Any] = {
         "quiet": True,
-        'socket_timeout': 5,
+        "socket_timeout": 5,
         # "proxy": "http://185.65.202.154:3128"
     }
 
@@ -82,15 +83,15 @@ class YouTubeLoader:
         try:
             with yt_dlp.YoutubeDL(self.__config) as ydl:
                 info_dict = ydl.extract_info(link, download=False)
-                formats = info_dict.get('formats', [])
+                formats = info_dict.get("formats", [])
                 for f in formats:
-                    if f.get("downloader_options") and f.get("fps") and f.get('width') \
-                            and f.get('height') and f.get("ext") == "mp4" and f.get('vbr'):
-                        cur_key = VideoOptions(width=f.get('width'), height=f.get('height'), fps=f.get('fps'))
-                        if resolution_dict.get(cur_key) and resolution_dict[cur_key] < f.get('vbr'):
-                            resolution_dict[cur_key] = f.get('vbr')
+                    if f.get("downloader_options") and f.get("fps") and f.get("width") \
+                            and f.get("height") and f.get("ext") == "mp4" and f.get("vbr"):
+                        cur_key = VideoOptions(width=f.get("width"), height=f.get("height"), fps=f.get("fps"))
+                        if resolution_dict.get(cur_key) and resolution_dict[cur_key] < f.get("vbr"):
+                            resolution_dict[cur_key] = f.get("vbr")
                         else:
-                            resolution_dict[cur_key] = f.get('vbr')
+                            resolution_dict[cur_key] = f.get("vbr")
                 logger.info(f"Successfully got options for video {link}")
         except Exception as e:
             logger.error(f"Exception during extracting video info: {e.__repr__()}")

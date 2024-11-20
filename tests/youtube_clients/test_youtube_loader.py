@@ -1,7 +1,9 @@
 import asyncio
 import subprocess
 from pathlib import Path
+
 import pytest
+
 from objects import DownloadTask, VideoOptions
 
 
@@ -32,7 +34,7 @@ async def test_download_timeout(youtube_loader, youtube_api_client, youtube_vide
     await asyncio.sleep(1)
     client = youtube_loader
     conf = {"quiet": True,
-            'socket_timeout': 5,
+            "socket_timeout": 5,
             "proxy": "http://1.1.2.2:3132"}
     for link in youtube_videos_for_load:
         video = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
@@ -176,7 +178,7 @@ async def test_get_options_load(youtube_loader, youtube_api_client):
             await youtube_loader.download_video(task)
             break
 
-    result = subprocess.run(f"ffmpeg -i {task.local_path}", shell=True, capture_output=True, text=True)
+    result = subprocess.run(f"ffmpeg -i {task.local_path}", shell=True, capture_output=True, text=True, check=False)
 
     assert "426x240" in result.stderr
     assert "30 fps" in result.stderr

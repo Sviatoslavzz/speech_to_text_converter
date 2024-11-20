@@ -2,11 +2,14 @@ import asyncio
 import platform
 import re
 from collections.abc import AsyncGenerator, Callable
+from pathlib import Path
+
+from loguru import logger
 
 from executors.process_executor import ProcessExecutor
 from executors.storage_executor import StorageExecutor
 from executors.transcriber_executor import TranscriberExecutor
-from objects import MB, DownloadTask, TranscriptionTask, YouTubeVideo, get_env, get_save_dir
+from objects import MB, DownloadTask, TranscriptionTask, VideoOptions, YouTubeVideo, get_env, get_save_dir
 from storage.storage_worker import storage_worker_as_target
 from transcribers.transcriber_worker import transcriber_worker_as_target
 from youtube_clients.youtube_api import YouTubeClient
@@ -15,13 +18,21 @@ from youtube_clients.youtube_loader import YouTubeLoader
 IS_MACOS = platform.system() == "Darwin"
 
 
-def launch_coroutines(async_worker: Callable, id_: str, videos: list):
+def remove_file(file: Path):
+    try:
+        file.unlink()
+    except FileNotFoundError:
+        logger.error(f"File not found : unable to remove {file.__fspath__()}")
+
+
+def launch_coroutines(async_worker: Callable, id_: str, videos: list, options: VideoOptions | None = None):
     return [
         asyncio.create_task(
             async_worker(
                 DownloadTask(
                     video=video,
                     id=id_,
+                    options=options,
                 )
             )
         )
@@ -39,6 +50,10 @@ def get_api_client() -> YouTubeClient:
 
 def get_loader() -> YouTubeLoader:
     return YouTubeLoader(get_save_dir()) if not YouTubeLoader.get_instance() else YouTubeLoader.get_instance()
+
+
+async def get_video_options(video: YouTubeVideo):
+    return await get_loader().get_video_options(video.link)
 
 
 async def convert_links_to_videos(links: str) -> AsyncGenerator[tuple[bool, str, YouTubeVideo | None], None]:
@@ -114,7 +129,7 @@ async def download_subtitles_worker(task: DownloadTask) -> DownloadTask:
 
 
 async def submit_task(
-    executor: ProcessExecutor, task_: TranscriptionTask | DownloadTask
+        executor: ProcessExecutor, task_: TranscriptionTask | DownloadTask
 ) -> TranscriptionTask | DownloadTask:
     """
     Transfer a task to executor and waits for the result in a separate thread

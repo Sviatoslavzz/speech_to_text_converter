@@ -74,6 +74,9 @@ class VideoOptions:
     fps: int = 30
     language: str = "ru"
 
+    def __str__(self):
+        return f"{self.width}x{self.height}:{self.fps}.{self.extension}"
+
 
 @dataclass(slots=True)
 class TranscriptionTask:
@@ -98,7 +101,10 @@ class DownloadTask:
 
 
 class UserRoute(StatesGroup):
-    option = State()  # video / channel / file
-    videos = State()  # list of links / channel link
+    """tg states"""
+    option = State()  # video | channel | file
+    videos = State()  # [links] | channel link
     file = State()
-    action = State()  # what to do
+    action = State()  # download_video | download_audio | download_text
+    load_options = State()
+    video_options = State()
