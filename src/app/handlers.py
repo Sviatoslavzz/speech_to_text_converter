@@ -25,12 +25,14 @@ from app.replies import (
     welcome_message,
 )
 from objects import (
+    SERVER,
     DownloadOptions,
     DownloadTask,
     TranscriptionTask,
     UserRoute,
     VideoOptions,
     YouTubeVideo,
+    get_save_dir,
 )
 from workers import (
     convert_links_to_videos,
@@ -137,30 +139,33 @@ async def file_receiver(message: Message, state: FSMContext):
     elif message.content_type == "document":
         file = message.document
     else:
-        logger.warning(f"{message.from_user.username}:{message.chat.id}:invalid file type:{message.content_type}")
+        logger.warning(f"{message.from_user.username}:{message.from_user.id}:invalid file type:{message.content_type}")
         await message.answer("Упс, кажется такой файл не подойдет ☹️")
         return
 
     await message.answer("Принято в работу!")
     try:
         file_info = await message.bot.get_file(file.file_id)  # если локально - то ждет полной загрузки
-        # TODO сейчас настроил только для локального сервера - подумать как можно динамически подстраиваться
-        # task = TranscriptionTask(
-        #     origin_path=get_save_dir() / file.file_name,
-        #     id=f"{message.chat.id}{message.message_id}"
-        # )
-        # await message.bot.download_file(file_info.file_path, destination=task.origin_path)
-        task = TranscriptionTask(
-            origin_path=Path(file_info.file_path),
-            id=f"{message.chat.id}{message.message_id}",
-        )
+        if SERVER == "telegram":
+            task = TranscriptionTask(
+                origin_path=get_save_dir() / f"{message.message_id!s}_{file.file_name}",
+                id=f"{message.from_user.id}{message.message_id}"
+            )
+            await message.bot.download_file(file_info.file_path, destination=task.origin_path)
+        elif SERVER == "local":
+            task = TranscriptionTask(
+                origin_path=Path(file_info.file_path),
+                id=f"{message.from_user.id}{message.message_id}",
+            )
+        else:
+            raise ValueError("SERVER must be 'telegram' or 'local'")
 
         result_tasks = await run_transcriber_executor([task])
 
         for r_task in result_tasks:
             if r_task.result:
                 await message.answer_document(FSInputFile(r_task.local_path))
-                logger.info(f"{message.chat.id} Text file sent")
+                logger.info(f"{message.from_user.id}:file sent")
                 remove_file(r_task.origin_path)
                 remove_file(r_task.local_path)
             else:
@@ -227,7 +232,8 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(UserRoute.single_video_options)
 async def download_video_with_single_option(callback: CallbackQuery, state: FSMContext):
     logger.info(f"{callback.from_user.username}:{callback.from_user.id} callback : single_video_options")
-
+    await callback.answer("🚀", show_alert=False)
+    await callback.message.answer("Принято в работу!")
     user_state = await state.get_data()
     async_task = asyncio.create_task(
         download_video_worker(

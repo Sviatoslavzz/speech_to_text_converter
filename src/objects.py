@@ -11,7 +11,7 @@ MINUTE = 60
 HOUR = MINUTE * 60
 MB = 1024 * 1024
 SAVING_FOLDER = "saved_files"
-
+SERVER = "local"  # "telegram" "local"
 
 def get_env() -> dict[str, str]:
     load_dotenv()
@@ -102,7 +102,6 @@ class DownloadTask:
 
 class UserRoute(StatesGroup):
     """user route states"""
-
     option = State()  # str : video | channel | file
     videos = State()  # [links] | channel link
     file = State()

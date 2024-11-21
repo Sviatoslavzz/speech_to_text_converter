@@ -1,23 +1,26 @@
 import asyncio
 
 from aiogram import Bot, Dispatcher
-
-# from aiogram.client.session.aiohttp import AiohttpSession
-# from aiogram.client.telegram import TelegramAPIServer
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from loguru import logger
 
 from app.handlers import router
-from objects import get_env
+from objects import SERVER, get_env
 
 
 async def main() -> None:
-    # local_server = TelegramAPIServer.from_base('http://localhost:9090')
-    # session = AiohttpSession(api=local_server)
-    bot = Bot(token=get_env().get("TG_BOT_TOKEN"))
-    # await bot.log_out()
-    # await bot.delete_webhook(drop_pending_updates=True)
+    session = None
+    bot_token = "TG_BOT_TOKEN"
+    if SERVER == "local":
+        bot_token = "LOCAL_BOT_TOKEN"
+        local_server = TelegramAPIServer.from_base("http://localhost:9090")
+        session = AiohttpSession(api=local_server)
+
+    bot = Bot(token=get_env().get(bot_token), session=session)
     dp = Dispatcher()
     dp.include_router(router)
+
     try:
         logger.info("Starting bot polling...")
         await dp.start_polling(bot)

@@ -9,7 +9,7 @@ from loguru import logger
 from executors.process_executor import ProcessExecutor
 from executors.storage_executor import StorageExecutor
 from executors.transcriber_executor import TranscriberExecutor
-from objects import MB, DownloadTask, TranscriptionTask, VideoOptions, YouTubeVideo, get_env, get_save_dir
+from objects import MB, SERVER, DownloadTask, TranscriptionTask, VideoOptions, YouTubeVideo, get_env, get_save_dir
 from storage.storage_worker import storage_worker_as_target
 from transcribers.transcriber_worker import transcriber_worker_as_target
 from youtube_clients.youtube_api import YouTubeClient
@@ -84,7 +84,7 @@ async def check_file_size(task: DownloadTask | TranscriptionTask) -> DownloadTas
     :param task: DownloadTask or TranscriptionTask
     :return: DownloadTask or TranscriptionTask
     """
-    if task.result and task.file_size > 50 * MB:
+    if SERVER == "telegram" and task.result and task.file_size > 50 * MB:
         if task.id in task.local_path.__fspath__():
             task.local_path = task.local_path.rename(task.local_path.with_name(task.local_path.name.lstrip(task.id)))
         tasks = await run_storage_executor([task])
