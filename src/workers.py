@@ -129,7 +129,7 @@ async def download_subtitles_worker(task: DownloadTask) -> DownloadTask:
 
 
 async def submit_task(
-        executor: ProcessExecutor, task_: TranscriptionTask | DownloadTask
+    executor: ProcessExecutor, task_: TranscriptionTask | DownloadTask
 ) -> TranscriptionTask | DownloadTask:
     """
     Transfer a task to executor and waits for the result in a separate thread

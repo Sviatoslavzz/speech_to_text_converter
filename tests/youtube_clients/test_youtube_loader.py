@@ -33,9 +33,7 @@ async def test_download_audio(youtube_loader, youtube_api_client, youtube_videos
 async def test_download_timeout(youtube_loader, youtube_api_client, youtube_videos_for_load):
     await asyncio.sleep(1)
     client = youtube_loader
-    conf = {"quiet": True,
-            "socket_timeout": 5,
-            "proxy": "http://1.1.2.2:3132"}
+    conf = {"quiet": True, "socket_timeout": 5, "proxy": "http://1.1.2.2:3132"}
     for link in youtube_videos_for_load:
         video = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
         task = await client.download_audio(DownloadTask(id=video.id, video=video), yt_dlp_config=conf)
@@ -166,7 +164,8 @@ async def test_get_options_load(youtube_loader, youtube_api_client):
     Tests that the video downloaded exactly with the options provided.
     """
     video = await youtube_api_client.get_video_by_id(
-        youtube_api_client.get_video_id("https://www.youtube.com/watch?v=NiHSj6KSMMo"))
+        youtube_api_client.get_video_id("https://www.youtube.com/watch?v=NiHSj6KSMMo")
+    )
     task: DownloadTask = DownloadTask(
         id="id132",
         video=video,
@@ -178,7 +177,7 @@ async def test_get_options_load(youtube_loader, youtube_api_client):
             await youtube_loader.download_video(task)
             break
 
-    result = subprocess.run(f"ffmpeg -i {task.local_path}", shell=True, capture_output=True, text=True, check=False)
+    result = subprocess.run(f"ffmpeg -i {task.local_path}", shell=True, capture_output=True, text=True, check=False)  # noqa S602
 
     assert "426x240" in result.stderr
     assert "30 fps" in result.stderr

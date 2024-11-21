@@ -8,14 +8,14 @@ from typing import Any
 
 import yt_dlp
 from loguru import logger
-from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled, YouTubeTranscriptApi
+from youtube_transcript_api import NoTranscriptFound, YouTubeTranscriptApi
 
 from objects import DownloadTask, VideoOptions
 
 
 class YouTubeLoader:
     """
-    Singleton client loader.
+    Singleton loader client.
     Using yt_dlp and youtube_transcript_api libs.
     internal settings: ThreadPoolExecutor workers number
     """
@@ -24,7 +24,6 @@ class YouTubeLoader:
     __config: dict[str, Any] = {
         "quiet": True,
         "socket_timeout": 5,
-        # "proxy": "http://185.65.202.154:3128"
     }
 
     def __new__(cls, *args, **kwargs):
@@ -32,11 +31,13 @@ class YouTubeLoader:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, directory: Path):
+    def __init__(self, directory: Path, proxy: str | None = None):
         self.dir = directory
         self.pool_heavy = ThreadPoolExecutor(max_workers=20)
         self.pool_light = ThreadPoolExecutor(max_workers=40)
-        logger.info("YouTubeLoader initialized")
+        if proxy:
+            self.__config["proxy"] = proxy
+        logger.info(f"{self.__class__.__name__} : initialized : heavy_pool_size={20} : light_pool_size={40}")
 
     @classmethod
     def get_instance(cls):
@@ -85,8 +86,14 @@ class YouTubeLoader:
                 info_dict = ydl.extract_info(link, download=False)
                 formats = info_dict.get("formats", [])
                 for f in formats:
-                    if f.get("downloader_options") and f.get("fps") and f.get("width") \
-                            and f.get("height") and f.get("ext") == "mp4" and f.get("vbr"):
+                    if (
+                        f.get("downloader_options")
+                        and f.get("fps")
+                        and f.get("width")
+                        and f.get("height")
+                        and f.get("ext") == "mp4"
+                        and f.get("vbr")
+                    ):
                         cur_key = VideoOptions(width=f.get("width"), height=f.get("height"), fps=f.get("fps"))
                         if resolution_dict.get(cur_key) and resolution_dict[cur_key] < f.get("vbr"):
                             resolution_dict[cur_key] = f.get("vbr")
@@ -99,10 +106,9 @@ class YouTubeLoader:
         return list(resolution_dict)
 
     @__async_wrap
-    def download_audio(self, task: DownloadTask,
-                       format_: str = "mp3",
-                       quality: str = "best",
-                       yt_dlp_config: dict | None = None) -> DownloadTask:
+    def download_audio(
+        self, task: DownloadTask, format_: str = "mp3", quality: str = "best", yt_dlp_config: dict | None = None
+    ) -> DownloadTask:
         """
         Downloads audio from the YouTube video.
         :param quality: best | worst
@@ -150,10 +156,10 @@ class YouTubeLoader:
         title = f"{task.id}{self.prepare_title(task.video.title)}"
         config = yt_dlp_config if yt_dlp_config else copy.deepcopy(self.__config)
         config["outtmpl"] = f"{self.dir}/{title}.%(ext)s"
-        config["format"] = (
-            f"""bestvideo[height<={task.options.height}][width<={task.options.width}][ext={task.options.extension}]
+        config[
+            "format"
+        ] = f"""bestvideo[height<={task.options.height}][width<={task.options.width}][ext={task.options.extension}]
 [fps<={task.options.fps}]+bestaudio[ext=m4a]/worst"""
-        )
 
         try:
             with yt_dlp.YoutubeDL(config) as ydl:
@@ -188,7 +194,7 @@ class YouTubeLoader:
                     transcript = transcript_obj.fetch()
                     break
             if (
-                    not transcript and transcript_obj_any and transcript_obj_any.is_translatable
+                not transcript and transcript_obj_any and transcript_obj_any.is_translatable
             ):  # TODO загружает [music]...
                 transcript = transcript_obj_any.translate("en").fetch()
             elif not transcript and transcript_obj_any:
@@ -198,7 +204,7 @@ class YouTubeLoader:
 
             logger.info(f"{task.id} Successfully got a transcript for video: {task.video.id}")
 
-        except (NoTranscriptFound, TranscriptsDisabled, Exception) as e:
+        except Exception as e:
             logger.error(f"{task.id} {e.__repr__()}")
             task.message.message["ru"] = f"Не нашел субтитры для видео {task.video.id}"
             task.result = False
