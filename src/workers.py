@@ -25,7 +25,12 @@ def remove_file(file: Path):
         logger.error(f"File not found : unable to remove {file.__fspath__()}")
 
 
-def launch_coroutines(async_worker: Callable, id_: str, videos: list, options: VideoOptions | None = None):
+def launch_one_coroutine(async_worker: Callable, id_: str, videos: list[YouTubeVideo], options: VideoOptions):
+    for video in videos:
+        yield [asyncio.create_task(async_worker(DownloadTask(video=video, id=id_, options=options)))]
+
+
+def launch_coroutines(async_worker: Callable, id_: str, videos: list, options: VideoOptions):
     return [
         asyncio.create_task(
             async_worker(
@@ -129,7 +134,7 @@ async def download_subtitles_worker(task: DownloadTask) -> DownloadTask:
 
 
 async def submit_task(
-    executor: ProcessExecutor, task_: TranscriptionTask | DownloadTask
+        executor: ProcessExecutor, task_: TranscriptionTask | DownloadTask
 ) -> TranscriptionTask | DownloadTask:
     """
     Transfer a task to executor and waits for the result in a separate thread

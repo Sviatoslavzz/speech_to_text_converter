@@ -24,6 +24,7 @@ from app.replies import (
     provide_links,
     welcome_message,
 )
+from app.support_handlers import check_privilege_and_load, task_completion_loop
 from objects import (
     SERVER,
     DownloadOptions,
@@ -41,7 +42,6 @@ from workers import (
     download_video_worker,
     get_channel_videos,
     get_video_options,
-    launch_coroutines,
     remove_file,
     run_transcriber_executor,
 )
@@ -122,8 +122,8 @@ async def video_handler_links(message: Message, state: FSMContext):
         await state.set_state(UserRoute.action)
         await message.answer("Тогда выбирай действие 🏄‍♂️", reply_markup=action_menu)
     else:
-        await message.answer("Попробуем еще раз?")
-        await state.set_state(UserRoute.videos)
+        await message.answer("Не нашел корректные ссылки.")
+        await state.clear()
 
 
 @router.message(UserRoute.file)
@@ -173,31 +173,6 @@ async def file_receiver(message: Message, state: FSMContext):
     except Exception as e:
         logger.error(f"{message.from_user.username}:{message.from_user.id}:{file.file_id}:{e.__repr__()}")
         await message.answer("Упс, что-то пошло не так!")
-
-
-async def task_completion_loop(coroutines: list, callback: CallbackQuery):
-    for complete_task in asyncio.as_completed(coroutines):
-        result_task: DownloadTask = await complete_task
-        await asyncio.sleep(0.5)
-        if result_task.result:
-            if result_task.storage_link:
-                await callback.message.answer(
-                    f"""💥 Видео: {result_task.video.title}
-Прикрепляю ссылку на внешнее хранилище, действует 5 минут\n{result_task.storage_link}""",
-                    link_preview_options=LinkPreviewOptions(is_disabled=True),
-                )
-                logger.info(f"{callback.message.from_user.id}:link to storage sent")
-            else:
-                await callback.message.answer_document(
-                    FSInputFile(
-                        path=Path(result_task.local_path),
-                        filename=f"{result_task.video.title}{result_task.local_path.suffix}",
-                    )
-                )
-                logger.info(f"{callback.message.from_user.id}:file sent")
-                remove_file(result_task.local_path)
-        else:
-            await callback.message.answer(result_task.message.message["ru"])
 
 
 @router.callback_query(F.data == "download_video", UserRoute.action)
@@ -264,13 +239,8 @@ async def download_video_with_multi_option(callback: CallbackQuery, state: FSMCo
     user_state = await state.get_data()
     width, height, fps = map(int, callback.data.split(":"))
     await state.clear()
-    coroutines = launch_coroutines(
-        async_worker=download_video_worker,
-        id_=f"{callback.from_user.id}{callback.message.message_id}",
-        videos=user_state.get("videos", []),
-        options=VideoOptions(width=width, height=height, fps=fps),
-    )
-    await task_completion_loop(coroutines, callback)
+    await check_privilege_and_load(callback, download_video_worker, user_state.get("videos", []),
+                                   VideoOptions(width=width, height=height, fps=fps))
 
 
 @router.callback_query(F.data == "download_audio", UserRoute.action)
@@ -280,12 +250,7 @@ async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer("Принято в работу!")
-    coroutines = launch_coroutines(
-        async_worker=download_audio_worker,
-        id_=f"{callback.from_user.id}{callback.message.message_id}",
-        videos=user_state.get("videos", []),
-    )
-    await task_completion_loop(coroutines, callback)
+    await check_privilege_and_load(callback, download_audio_worker, user_state.get("videos", []))
 
 
 @router.callback_query(F.data == "download_text", UserRoute.action)
@@ -296,14 +261,7 @@ async def download_text_handler(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer("Принято в работу!")
-
-    coroutines = launch_coroutines(
-        async_worker=download_subtitles_worker,
-        id_=f"{callback.from_user.id}{callback.message.message_id}",
-        videos=user_state.get("videos", []),
-    )
-
-    await task_completion_loop(coroutines, callback)
+    await check_privilege_and_load(callback, download_subtitles_worker, user_state.get("videos", []))
 
 
 @router.message()

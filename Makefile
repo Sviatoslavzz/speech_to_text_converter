@@ -30,5 +30,5 @@ format:
 	ruff format .
 
 clean:
+	rm -rf src/*.egg-info *.egg_info __pycache__ build/
 	@echo "🧹🧹🧹 perfect"
-	@rm -rf src/*.egg-info *.egg_info __pycache__ build/

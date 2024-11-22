@@ -11,7 +11,7 @@ MINUTE = 60
 HOUR = MINUTE * 60
 MB = 1024 * 1024
 SAVING_FOLDER = "saved_files"
-SERVER = "local"  # "telegram" "local"
+SERVER = "telegram"  # "telegram" "local"
 
 def get_env() -> dict[str, str]:
     load_dotenv()
@@ -93,7 +93,7 @@ class DownloadTask:
     id: str
     video: YouTubeVideo
     message: AppMessage = field(default_factory=AppMessage)
-    options: VideoOptions | None = field(default_factory=VideoOptions)
+    options: VideoOptions = field(default_factory=VideoOptions)
     local_path: Path | None = None
     result: bool | None = False
     file_size: int | None = None
