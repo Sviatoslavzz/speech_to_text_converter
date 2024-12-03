@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from config import DropboxConfig
+from config.conf_models import DropboxConfig
 from objects import MINUTE, DownloadTask, get_env
 from storage.dropbox_storage import DropBox
 

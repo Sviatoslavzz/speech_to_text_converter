@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
-from config import DropboxConfig
+from config.conf_models import DropboxConfig
 from executors.process_executor import ProcessExecutor
 from storage.dropbox_storage import DropBox
 from transcribers.transcriber_worker import TranscriberWorker

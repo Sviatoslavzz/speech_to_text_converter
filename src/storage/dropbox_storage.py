@@ -11,7 +11,7 @@ import requests
 from dropbox.files import CommitInfo, UploadSessionCursor
 from loguru import logger
 
-from config import DropboxConfig
+from config.conf_models import DropboxConfig
 from objects import HOUR, MB, MINUTE
 
 

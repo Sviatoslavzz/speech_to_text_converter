@@ -178,8 +178,19 @@ async def file_receiver(message: Message, state: FSMContext):
 @router.callback_query(F.data == "download_video", UserRoute.action)
 async def video_options_handler(callback: CallbackQuery, state: FSMContext):
     logger.info(f"{callback.from_user.username}:{callback.from_user.id}:callback:video_options_handler")
-    await callback.message.answer("Как предпочитаешь выбирать качество видео?", reply_markup=option_chooser_menu)
-    await state.set_state(UserRoute.load_options)
+
+    user_state = await state.get_data()
+    if user_state.get("videos") and len(user_state.get("videos")) == 1:
+        options = await get_video_options(user_state.get("videos")[0])
+        await callback.message.answer(
+            f"Доступные опции для видео {user_state.get("videos")[0].title}",
+            reply_markup=generate_option_keyboard(options)
+        )
+        await state.update_data(video_options=options)
+        await state.set_state(UserRoute.single_video_options)
+    else:
+        await callback.message.answer("Как предпочитаешь выбирать качество видео?", reply_markup=option_chooser_menu)
+        await state.set_state(UserRoute.load_options)
 
 
 @router.callback_query(UserRoute.load_options)
