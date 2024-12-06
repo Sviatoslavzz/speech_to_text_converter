@@ -2,7 +2,6 @@ from typing import TypeVar
 from pydantic import BaseModel, Field, field_validator
 from objects import MINUTE
 from transcribers.abscract_transcriber import AbstractTranscriber
-from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 
 storage_class = TypeVar("storage_class")
 
