@@ -1,18 +1,22 @@
 bot:
-  server: local
-  token_env: token_env_name
+  server: telegram
+  token_env: TG_TOKEN
 youtube:
-  api_key_env: api_key
-  proxies: ["1234", "2345"]
+  api_key_env: YOUTUBE_API
 transcriber:
-  q_size: 200
+  q_size: 50
   cls: FasterWhisperTranscriber
   model: small
 storage:
-  q_size: 400
+  q_size: 300
   storages:
     - db1:
         cls: DropBox
-        refresh_token_env: refresh_token_env
-        app_key_env: app_key_env
-        app_secret_env: app_secret_env
+        refresh_token_env: DROPBOX_REFRESH_TOKEN
+        app_key_env: DROPBOX_APP_KEY
+        app_secret_env: DROPBOX_APP_SECRET
+    - db2:
+        cls: DropBox
+        refresh_token_env: DROPBOX_REFRESH_TOKEN_2
+        app_key_env: DROPBOX_APP_KEY_2
+        app_secret_env: DROPBOX_APP_SECRET_2

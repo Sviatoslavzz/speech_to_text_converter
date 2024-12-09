@@ -1,5 +1,5 @@
 [project]
-name = "youtube_loader_service"
+name = "talkushka_service"
 version = "2.0.0"
 description = "service is capable of download audio/video/text by youtube video/channel link and transcribe in case transcript is missing"
 readme = "README.md"
@@ -25,13 +25,16 @@ requires-python = ">=3.12"
 
 [project.optional-dependencies]
 dev = [
-    "ruff>=0.6.2"
+    "ruff~=0.8.0"
 ]
 test = [
     "pytest>=8.0.0,<9.0.0",
     "pytest-asyncio<0.25.0",
     "pytest-timeout",
 ]
+
+#[project.scripts]
+#bot = "src.__main__:main"
 
 [tool.ruff]
 line-length = 120
@@ -50,8 +53,6 @@ exclude = [
 [tool.ruff.lint]
 ignore = [
     "RUF001", # String contains ambiguous char
-    "ANN101", # Missing type annotation for `self` in method
-    "ANN102", # Missing type annotation for `cls` in classmethod
     "ANN204", # Missing return type annotation for special method `__del__`
     "T201", # `print` found
     "RUF003", # Comment contains smth
@@ -98,7 +99,7 @@ extend-select = [
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "ANN001", "ANN201", "PLR2004", "INP001"]
+"tests/*" = ["S101", "ANN001", "ANN201", "PLR2004", "INP001", "S105"]
 "conftest.py" = ["S101", "ANN001", "ANN201"]
 
 [tool.setuptools.packages.find]

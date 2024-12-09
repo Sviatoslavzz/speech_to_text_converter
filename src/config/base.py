@@ -1,10 +1,11 @@
 from pathlib import Path
-import yaml
 from typing import TypeVar
 
-from pydantic import BaseModel
+import yaml
 
-ConfigModelType = TypeVar("ConfigModelType", bound=BaseModel)
+from config.conf_models import BaseConfig
+
+ConfigModelType = TypeVar("ConfigModelType", bound=BaseConfig)
 
 
 class YAMLConfig:

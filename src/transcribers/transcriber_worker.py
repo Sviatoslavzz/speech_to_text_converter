@@ -1,4 +1,5 @@
-from asyncio import get_running_loop, sleep
+import time
+from asyncio import get_running_loop
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
@@ -6,15 +7,12 @@ from typing import Any
 
 from loguru import logger
 
+from config.conf_models import TranscriberConfig
 from objects import TranscriptionTask
-from transcribers.abscract_transcriber import AbstractTranscriber
-from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 
 
 class TranscriberWorker:
     _instance = None
-    _WHISPER_MODEL = "small"
-    _TRANSCRIBER: type[AbstractTranscriber] = FasterWhisperTranscriber
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -22,10 +20,11 @@ class TranscriberWorker:
 
         return cls._instance
 
-    def __init__(self):
-        logger.info(f"{self.__class__.__name__} initializing...")
-        self.transcriber = self._TRANSCRIBER(model=self._WHISPER_MODEL)
-        self.pool = ThreadPoolExecutor(max_workers=4)
+    def __init__(self, config: TranscriberConfig):
+        self.transcriber = config.cls(model=config.model)
+        self.pool = ThreadPoolExecutor(max_workers=config.pool_size)
+
+        logger.info(f"{self.__class__.__name__} initialized")
 
     @classmethod
     def get_instance(cls):
@@ -85,10 +84,10 @@ class TranscriberWorker:
         return task
 
 
-async def transcriber_worker_as_target(task: TranscriptionTask) -> TranscriptionTask:
+async def transcriber_worker_as_target(task: TranscriptionTask, config: TranscriberConfig) -> TranscriptionTask:
     worker = TranscriberWorker.get_instance()
     if not worker:
-        worker = TranscriberWorker()
-        await sleep(1)
+        worker = TranscriberWorker(config=config)
+        time.sleep(1)  # blocking pause to wait for TranscriberWorker init
 
     return await worker.transcribe(task)

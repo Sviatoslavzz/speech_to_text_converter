@@ -1,11 +1,10 @@
 import time
-from asyncio import sleep
 from dataclasses import dataclass
 
 from loguru import logger
 
 from config.conf_models import DropboxConfig
-from objects import MINUTE, DownloadTask, get_env
+from objects import MINUTE, DownloadTask
 from storage.dropbox_storage import DropBox
 
 
@@ -32,7 +31,8 @@ class StorageWorker:
 
     def __init__(self, config: list[DropboxConfig]):
         logger.info(f"{self.__class__.__name__}: Initializing...")
-        self.storages = [Storage(cls=storage_conf.cls(storage_conf)) for storage_conf in config]
+        self.storages = [Storage(cls=storage_conf.cls(**storage_conf.model_dump(exclude={"cls"}))) for storage_conf in
+                         config]
         self._connected = False
         self._initialize_storages()
         self.timer = time.time()
@@ -68,7 +68,7 @@ class StorageWorker:
     async def upload(self, task: DownloadTask):
         """
         Checks if any storage has the same file uploaded
-        Uploads the file to the most sutable storage
+        Uploads the file to the most suitable storage
         :param task: DownloadTask
         :return: storage link | None
         """
@@ -104,7 +104,7 @@ class StorageWorker:
     async def check_timer(self):
         """
         Sends timer-delete request to each storage every minute
-        Assumed to be called constantly
+        Assumed to be called in an infinite loop
         """
         if time.time() - self.timer > MINUTE:
             self.timer = time.time()
@@ -114,26 +114,14 @@ class StorageWorker:
             await self.update_space()
 
 
-async def storage_worker_as_target(task: DownloadTask | None = None) -> DownloadTask | None:
+async def storage_worker_as_target(task: DownloadTask | None,
+                                   config: dict[str, DropboxConfig]) -> DownloadTask | None:
     sw = StorageWorker.get_instance()
+
     if not sw:
-        # TODO вынести отсюда наверх - передавать каждый раз как аргумент
-        conf = [
-            DropboxConfig(
-                cls=DropBox,
-                refresh_token=get_env().get("DROPBOX_REFRESH_TOKEN"),
-                app_key=get_env().get("DROPBOX_APP_KEY"),
-                app_secret=get_env().get("DROPBOX_APP_SECRET"),
-            ),
-            DropboxConfig(
-                cls=DropBox,
-                refresh_token=get_env().get("DROPBOX_REFRESH_TOKEN_2"),
-                app_key=get_env().get("DROPBOX_APP_KEY_2"),
-                app_secret=get_env().get("DROPBOX_APP_SECRET_2"),
-            ),
-        ]
-        sw = StorageWorker(conf)
-        await sleep(1)
+        # TODO shared memory config
+        sw = StorageWorker(list(config.values()))
+        time.sleep(1)  # blocking pause to wait for StorageWorker init
         await sw.update_space()
 
     if task and task.local_path:

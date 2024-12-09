@@ -1,5 +1,4 @@
 import asyncio
-from pathlib import Path
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
@@ -25,25 +24,13 @@ from app.replies import (
     welcome_message,
 )
 from app.support_handlers import check_privilege_and_load, task_completion_loop
+from app_worker import AppWorker
 from objects import (
-    SERVER,
     DownloadOptions,
     DownloadTask,
-    TranscriptionTask,
     UserRoute,
     VideoOptions,
     YouTubeVideo,
-    get_save_dir,
-)
-from workers import (
-    convert_links_to_videos,
-    download_audio_worker,
-    download_subtitles_worker,
-    download_video_worker,
-    get_channel_videos,
-    get_video_options,
-    remove_file,
-    run_transcriber_executor,
 )
 
 router = Router()
@@ -102,7 +89,7 @@ async def video_handler_links(message: Message, state: FSMContext):
     videos: list[YouTubeVideo] = []
 
     if user_state.get("option") == "channel":
-        result, amount, videos = await get_channel_videos(message.text)
+        result, amount, videos = await AppWorker.get_instance().get_channel_videos(message.text)
         if not result:
             await message.answer(f"Не нашел канал по данной ссылке {message.text.strip()} ❌")
         elif not amount:
@@ -110,7 +97,7 @@ async def video_handler_links(message: Message, state: FSMContext):
         else:
             await message.answer(f"Нашел {amount} видео на канале {videos[0].owner_username} ✅")
     elif user_state.get("option") == "video":
-        async for result, link, video in convert_links_to_videos(message.text):
+        async for result, link, video in AppWorker.get_instance().convert_links_to_videos(message.text):
             if not result:
                 await message.answer(text=f"{link} ❌", link_preview_options=LinkPreviewOptions(is_disabled=True))
             else:
@@ -145,29 +132,15 @@ async def file_receiver(message: Message, state: FSMContext):
 
     await message.answer("Принято в работу!")
     try:
-        file_info = await message.bot.get_file(file.file_id)  # если локально - то ждет полной загрузки
-        if SERVER == "telegram":
-            task = TranscriptionTask(
-                origin_path=get_save_dir() / f"{message.message_id!s}_{file.file_name}",
-                id=f"{message.from_user.id}{message.message_id}"
-            )
-            await message.bot.download_file(file_info.file_path, destination=task.origin_path)
-        elif SERVER == "local":
-            task = TranscriptionTask(
-                origin_path=Path(file_info.file_path),
-                id=f"{message.from_user.id}{message.message_id}",
-            )
-        else:
-            raise ValueError("SERVER must be 'telegram' or 'local'")
-
-        result_tasks = await run_transcriber_executor([task])
+        task = await AppWorker.get_instance().create_transcription_task(message, file)
+        result_tasks = await AppWorker.get_instance().run_transcriber_executor([task])
 
         for r_task in result_tasks:
             if r_task.result:
                 await message.answer_document(FSInputFile(r_task.local_path))
                 logger.info(f"{message.from_user.id}:file sent")
-                remove_file(r_task.origin_path)
-                remove_file(r_task.local_path)
+                AppWorker.get_instance().remove_file(r_task.origin_path)
+                AppWorker.get_instance().remove_file(r_task.local_path)
             else:
                 await message.answer("К сожалению, что-то пошло не так и я не смог сделать транскрибацию 😓")
     except Exception as e:
@@ -181,7 +154,7 @@ async def video_options_handler(callback: CallbackQuery, state: FSMContext):
 
     user_state = await state.get_data()
     if user_state.get("videos") and len(user_state.get("videos")) == 1:
-        options = await get_video_options(user_state.get("videos")[0])
+        options = await AppWorker.get_instance().get_video_options(user_state.get("videos")[0])
         await callback.message.answer(
             f"Доступные опции для видео {user_state.get("videos")[0].title}",
             reply_markup=generate_option_keyboard(options)
@@ -199,7 +172,7 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
     user_state = await state.get_data()
     videos = user_state.get("videos", [])
     if callback.data == "single_option" and videos:
-        options = await get_video_options(videos[0])
+        options = await AppWorker.get_instance().get_video_options(videos[0])
         await callback.message.answer(
             f"Доступные опции для видео {videos[0].title}", reply_markup=generate_option_keyboard(options)
         )
@@ -222,7 +195,7 @@ async def download_video_with_single_option(callback: CallbackQuery, state: FSMC
     await callback.message.answer("Принято в работу!")
     user_state = await state.get_data()
     async_task = asyncio.create_task(
-        download_video_worker(
+        AppWorker.get_instance().download_video_worker(
             DownloadTask(
                 id=f"{callback.message.chat.id}{callback.message.message_id}",
                 video=user_state["videos"].pop(0),
@@ -250,8 +223,10 @@ async def download_video_with_multi_option(callback: CallbackQuery, state: FSMCo
     user_state = await state.get_data()
     width, height, fps = map(int, callback.data.split(":"))
     await state.clear()
-    await check_privilege_and_load(callback, download_video_worker, user_state.get("videos", []),
-                                   VideoOptions(width=width, height=height, fps=fps))
+    await check_privilege_and_load(callback=callback,
+                                   worker=AppWorker.get_instance().download_video_worker,
+                                   videos=user_state.get("videos", []),
+                                   options=VideoOptions(width=width, height=height, fps=fps))
 
 
 @router.callback_query(F.data == "download_audio", UserRoute.action)
@@ -261,7 +236,9 @@ async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer("Принято в работу!")
-    await check_privilege_and_load(callback, download_audio_worker, user_state.get("videos", []))
+    await check_privilege_and_load(callback=callback,
+                                   worker=AppWorker.get_instance().download_audio_worker,
+                                   videos=user_state.get("videos", []))
 
 
 @router.callback_query(F.data == "download_text", UserRoute.action)
@@ -272,7 +249,9 @@ async def download_text_handler(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer("Принято в работу!")
-    await check_privilege_and_load(callback, download_subtitles_worker, user_state.get("videos", []))
+    await check_privilege_and_load(callback=callback,
+                                   worker=AppWorker.get_instance().download_subtitles_worker,
+                                   videos=user_state.get("videos", []))
 
 
 @router.message()

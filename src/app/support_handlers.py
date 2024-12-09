@@ -4,8 +4,8 @@ from collections.abc import Callable
 from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions
 from loguru import logger
 
+from app_worker import AppWorker
 from objects import DownloadTask, VideoOptions, YouTubeVideo
-from workers import launch_coroutines, launch_one_coroutine, remove_file
 
 
 async def task_completion_loop(coroutines: list, callback: CallbackQuery):
@@ -28,7 +28,7 @@ async def task_completion_loop(coroutines: list, callback: CallbackQuery):
                     )
                 )
                 logger.info(f"{callback.message.from_user.id}:file sent")
-                remove_file(result_task.local_path)
+                AppWorker.get_instance().remove_file(result_task.local_path)
         else:
             await callback.message.answer(result_task.message.message["ru"])
 
@@ -39,7 +39,7 @@ async def check_privilege_and_load(callback: CallbackQuery,
                                    options: VideoOptions | None = None):
     if callback.from_user.id in [123]:  # allowed user list
         """launch all tasks at a time"""
-        coroutines = launch_coroutines(
+        coroutines = AppWorker.get_instance().launch_coroutines(
             async_worker=worker,
             id_=f"{callback.from_user.id}{callback.message.message_id}",
             videos=videos,
@@ -48,7 +48,7 @@ async def check_privilege_and_load(callback: CallbackQuery,
         await task_completion_loop(coroutines, callback)
     else:
         """one task per user at a time"""
-        for coroutine in launch_one_coroutine(
+        async for coroutine in AppWorker.get_instance().launch_one_coroutine(
                 async_worker=worker,
                 id_=f"{callback.from_user.id}{callback.message.message_id}",
                 videos=videos,

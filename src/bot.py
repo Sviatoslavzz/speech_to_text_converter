@@ -6,18 +6,19 @@ from aiogram.client.telegram import TelegramAPIServer
 from loguru import logger
 
 from app.handlers import router
-from objects import SERVER, get_env
+from app_worker import AppWorker
+from config.base import YAMLConfig
+from config.conf_models import BotConfig
+from parser import get_parser
 
 
-async def main() -> None:
+async def start_bot(bot_conf: BotConfig):
     session = None
-    bot_token = "TG_BOT_TOKEN"
-    if SERVER == "local":
-        bot_token = "LOCAL_BOT_TOKEN"
-        local_server = TelegramAPIServer.from_base("http://localhost:9090")
+    if bot_conf.server == "local":
+        local_server = TelegramAPIServer.from_base(f"http://{bot_conf.host}:{bot_conf.port}")
         session = AiohttpSession(api=local_server)
 
-    bot = Bot(token=get_env().get(bot_token), session=session)
+    bot = Bot(token=bot_conf.token_env, session=session)
     dp = Dispatcher()
     dp.include_router(router)
 
@@ -26,10 +27,19 @@ async def main() -> None:
         await dp.start_polling(bot)
     except Exception as e:
         logger.error(f"Failed to start polling: {e.__repr__()}")
-        raise e
     finally:
         await bot.session.close()
         logger.info("Bot session closed.")
+
+
+async def main() -> None:
+    parser = get_parser()
+    args = parser.parse_args()
+    config: YAMLConfig = args.config
+
+    AppWorker(config.data)
+
+    await start_bot(config.data.bot)
 
 
 if __name__ == "__main__":

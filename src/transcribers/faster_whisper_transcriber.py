@@ -8,7 +8,7 @@ from transcribers.abscract_transcriber import AbstractTranscriber
 
 
 class FasterWhisperTranscriber(AbstractTranscriber):
-    FASTER_WHISPER_FORMATS = ["mp3", "mp4", "m4a", "wav", "webm", "mov", "ogg", "opus"]  # TODO take from config
+    FASTER_WHISPER_FORMATS = ["mp3", "mp4", "m4a", "wav", "webm", "mov", "ogg", "opus"]
 
     @dataclass
     class Config:

@@ -10,7 +10,7 @@ warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using F
 
 
 class WhisperTranscriber(AbstractTranscriber):
-    WHISPER_FORMATS = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm", "mov"]  # TODO take from config
+    WHISPER_FORMATS = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm", "mov"]
 
     def __init__(self, model: str):
         if not self.validate_model(model):
