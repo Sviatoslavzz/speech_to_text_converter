@@ -31,9 +31,12 @@ class AppWorker:
     def __init__(self, service_config: BaseConfig):
         self.config = service_config
         self.youtube_client = YouTubeClient(self.config.youtube.api_key_env)
-        self.loader = YouTubeLoader(self.config.youtube.save_dir)  # TODO proxies
+        self.loader = YouTubeLoader(directory=self.config.youtube.save_dir,
+                                    heavy_pool_size=self.config.youtube.heavy_pool_size,
+                                    light_pool_size=self.config.youtube.light_pool_size,
+                                    proxy=self.config.youtube.proxies or None)
 
-        logger.info(f"{self.__class__.__name__} initialized")
+        logger.debug("{cls} initialized", cls=self.__class__.__name__)
 
     @classmethod
     def get_instance(cls):
@@ -44,7 +47,7 @@ class AppWorker:
         try:
             file.unlink()
         except FileNotFoundError:
-            logger.error(f"File not found : unable to remove {file.__fspath__()}")
+            logger.error("File not found : unable to remove {f_name}", f_name=file.__fspath__())
 
     @staticmethod
     async def launch_one_coroutine(async_worker: Callable, id_: str, videos: list[YouTubeVideo],

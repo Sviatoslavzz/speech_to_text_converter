@@ -3,8 +3,10 @@ bot:
   token_env: TG_TOKEN
 youtube:
   api_key_env: YOUTUBE_API
+  heavy_pool_size: 10
+  light_pool_size: 20
 transcriber:
-  q_size: 50
+  q_size: 200
   cls: FasterWhisperTranscriber
   model: small
 storage:
@@ -12,11 +14,13 @@ storage:
   storages:
     - db1:
         cls: DropBox
+        storage_time: 2
         refresh_token_env: DROPBOX_REFRESH_TOKEN
         app_key_env: DROPBOX_APP_KEY
         app_secret_env: DROPBOX_APP_SECRET
     - db2:
         cls: DropBox
+        storage_time: 2
         refresh_token_env: DROPBOX_REFRESH_TOKEN_2
         app_key_env: DROPBOX_APP_KEY_2
         app_secret_env: DROPBOX_APP_SECRET_2

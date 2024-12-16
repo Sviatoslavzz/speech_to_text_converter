@@ -16,8 +16,11 @@ from objects import DownloadTask, VideoOptions
 class YouTubeLoader:
     """
     Singleton loader client.
-    Using yt_dlp and youtube_transcript_api libs.
-    internal settings: ThreadPoolExecutor workers number
+    `yt_dlp` and `youtube_transcript_api` libs are used.
+
+    Runs loading tasks asynchronously in threads.
+    pool_heavy - for audio and video loading.
+    pool_light - for transcript loading.
     """
 
     _instance = None
@@ -31,13 +34,17 @@ class YouTubeLoader:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, directory: Path, proxy: str | None = None):
+    def __init__(self, directory: Path, heavy_pool_size: int, light_pool_size: int, proxy: str | None = None):
         self.dir = directory
-        self.pool_heavy = ThreadPoolExecutor(max_workers=20)
-        self.pool_light = ThreadPoolExecutor(max_workers=40)
+        self.pool_heavy = ThreadPoolExecutor(max_workers=heavy_pool_size)
+        self.pool_light = ThreadPoolExecutor(max_workers=light_pool_size)
         if proxy:
             self.__config["proxy"] = proxy
-        logger.info(f"{self.__class__.__name__} : initialized : heavy_pool_size={20} : light_pool_size={40}")
+
+        logger.info("{cls} : initialized : heavy_pool_size={heavy} : light_pool_size={light}",
+                    cls=self.__class__.__name__,
+                    heavy=heavy_pool_size,
+                    light=light_pool_size)
 
     @classmethod
     def get_instance(cls):
@@ -87,27 +94,27 @@ class YouTubeLoader:
                 formats = info_dict.get("formats", [])
                 for f in formats:
                     if (
-                        f.get("downloader_options")
-                        and f.get("fps")
-                        and f.get("width")
-                        and f.get("height")
-                        and f.get("ext") == "mp4"
-                        and f.get("vbr")
+                            f.get("downloader_options")
+                            and f.get("fps")
+                            and f.get("width")
+                            and f.get("height")
+                            and f.get("ext") == "mp4"
+                            and f.get("vbr")
                     ):
                         cur_key = VideoOptions(width=f.get("width"), height=f.get("height"), fps=f.get("fps"))
                         if resolution_dict.get(cur_key) and resolution_dict[cur_key] < f.get("vbr"):
                             resolution_dict[cur_key] = f.get("vbr")
                         else:
                             resolution_dict[cur_key] = f.get("vbr")
-                logger.info(f"Successfully got options for video {link}")
+                logger.info("Successfully got options for video {link}", link=link)
         except Exception as e:
-            logger.error(f"Exception during extracting video info: {e.__repr__()}")
+            logger.error("Exception during extracting video info: {err}", err=e.__repr__())
 
         return list(resolution_dict)
 
     @__async_wrap
     def download_audio(
-        self, task: DownloadTask, format_: str = "mp3", quality: str = "best", yt_dlp_config: dict | None = None
+            self, task: DownloadTask, format_: str = "mp3", quality: str = "best", yt_dlp_config: dict | None = None
     ) -> DownloadTask:
         """
         Downloads audio from the YouTube video.
@@ -137,10 +144,13 @@ class YouTubeLoader:
                 task.result = True
                 task.local_path = Path(f"{self.dir}/{title}.{ext}")
                 task.file_size = task.local_path.stat().st_size
-                logger.info(f"{task.id} Audio downloaded to {self.dir}/{title}.{ext}")
+                logger.info("{task} Audio downloaded to {dir}/{title}.{ext}",
+                            task=task.id, dir=self.dir, title=title, ext=ext)
         except Exception as e:
-            logger.error(f"{task.id} Exception during audio download for video id: {task.video.id} {e.__repr__()}")
+            logger.error("{task} Exception during audio download for video id: {video} {err}",
+                         task=task.id, video=task.video.id, err=e.__repr__())
             task.message.message["ru"] = "Произошла ошибка при скачивании аудио файла"
+            task.message.message["en"] = "Error during audio download"
             task.result = False
 
         return task
@@ -167,10 +177,13 @@ class YouTubeLoader:
                 task.local_path = Path(f"{self.dir}/{title}.{task.options.extension}")
                 task.file_size = task.local_path.stat().st_size
                 task.result = True
-                logger.info(f"{task.id} Video downloaded to {self.dir}/{title}.{task.options.extension}")
+                logger.info("{task} Video downloaded to {dir}/{title}.{ext}",
+                            task=task.id, dir=self.dir, title=title, ext=task.options.extension)
         except Exception as e:
-            logger.error(f"{task.id} Exception during video download for video id: {task.video.id}, {e.__repr__()}")
+            logger.error("{task} Exception during video download for video id: {video}, {err}",
+                         task=task.id, video=task.video.id, err=e.__repr__())
             task.message.message["ru"] = "Произошла ошибка при скачивании видео файла"
+            task.message.message["ru"] = "Error during video download"
             task.result = False
 
         return task
@@ -194,7 +207,7 @@ class YouTubeLoader:
                     transcript = transcript_obj.fetch()
                     break
             if (
-                not transcript and transcript_obj_any and transcript_obj_any.is_translatable
+                    not transcript and transcript_obj_any and transcript_obj_any.is_translatable
             ):  # TODO загружает [music]...
                 transcript = transcript_obj_any.translate("en").fetch()
             elif not transcript and transcript_obj_any:
@@ -202,10 +215,11 @@ class YouTubeLoader:
             elif not transcript:
                 raise NoTranscriptFound
 
-            logger.info(f"{task.id} Successfully got a transcript for video: {task.video.id}")
+            logger.info("{task} Successfully got a transcript for video: {video}",
+                        task=task.id, video=task.video.id)
 
         except Exception as e:
-            logger.error(f"{task.id} {e.__repr__()}")
+            logger.warning("{task} {err}", task=task.id, err=e.__repr__())
             task.message.message["ru"] = f"Не нашел субтитры для видео {task.video.id}"
             task.result = False
             return task
@@ -217,7 +231,7 @@ class YouTubeLoader:
             file.write(f"Дата публикации: {task.video.published_at}\n\n")
             for entry in transcript:
                 file.write(entry["text"].replace("\n", "") + " ")
-        logger.info(f"{task.id} Transcript saved to: {target_path}")
+        logger.info("{task} Transcript saved to: {path}", task=task.id, path=target_path)
         task.local_path = target_path
         task.file_size = task.local_path.stat().st_size
         task.result = True
