@@ -65,7 +65,8 @@ class TranscriberWorker:
         except NotImplementedError:
             task.result = False
             task.message.available_languages.append("en")
-            task.message.message = {"ru": "Неверное расширение файла", "en": "File format is not supported"}
+            task.message.message = {"ru": "Неверное расширение файла",
+                                    "en": "File format is not supported"}
             return task
 
         task.local_path = task.origin_path.with_suffix(".txt")

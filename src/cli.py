@@ -1,60 +1,50 @@
 import asyncio
-import os
+from collections import OrderedDict
+from collections.abc import Callable
 from pathlib import Path
 
-from dotenv import load_dotenv
 from loguru import logger
 
-from objects import DownloadOptions, YouTubeVideo
-from transcribers.abscract_transcriber import AbstractTranscriber
-from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
+from app_worker import AppWorker
+from config.base import YAMLConfig
+from config.conf_models import BaseConfig
+from objects import DownloadOptions, DownloadTask, TranscriptionTask, VideoOptions, YouTubeVideo
+from parser import get_parser
 from transcribers.transcriber_worker import TranscriberWorker
-from youtube_clients.youtube_api import YouTubeClient
-from youtube_clients.youtube_loader import YouTubeLoader
-
-# TODO добавление через config
-WHISPER_MODEL = "small"
-SAVING_FOLDER = "saved_files"
-TRANSCRIBER: type[AbstractTranscriber] = FasterWhisperTranscriber
-
-
-def get_env() -> dict[str, str]:
-    load_dotenv()
-    return {"YOUTUBE_API": os.getenv("YOUTUBE_API")}
-
-
-def make_save_dir() -> Path:
-    absolute_path = Path(__file__).absolute().parent.parent
-    dir_ = Path(f"{absolute_path}/{SAVING_FOLDER}")
-    if not dir_.is_dir():
-        dir_.mkdir()
-        logger.info(f"Saving directory created: {dir_}")
-    logger.info(f"Saving directory set up: {dir_}")
-    return dir_
 
 
 async def collect_videos() -> list[YouTubeVideo | None]:
-    client = YouTubeClient(get_env().get("YOUTUBE_API"))  # TODO change to config
-
+    """
+    Collects YouTubeVideo objects by provided links
+    """
     videos = []
-    channel_link = input(
-        """You can enter a channel link to collect all videos from a channel, """
-        """or press enter to proceed with simple links:\n"""
-    )
-    if "youtube.com" in channel_link:
-        channel_id = await client.get_channel_id_by_link(channel_link)
-        if channel_id:
-            amount, videos = await client.get_channel_videos(channel_id)
-            logger.info(f"Collected {amount} videos from channel {channel_id}")
+    chooser = input("Please choose a mode:\n1. channel link\n2. video link(s)\n")
+    if chooser not in ["1", "2"]:
+        return videos
+
+    if chooser == "1":
+        channel = input("Please provide a channel link: ")
+        result, amount, videos = await AppWorker.get_instance().get_channel_videos(channel)
+        if not result:
+            logger.warning("Не нашел канал по данной ссылке")
+        elif not amount:
+            logger.warning("Не нашел видео на данном канале")
+        else:
+            logger.info(f"Нашел {amount} видео на канале {videos[0].owner_username} ✅")
     else:
-        print("Please provide YouTube video links each on new line and press enter:")
-        link = input()
-        while link != "":
-            if "youtube.com" in link:
-                video = await client.get_video_by_id(link.strip())
-                if video:
-                    videos.append(video)
-            link = input()
+        user_input = ""
+        while True:
+            link = input("Please provide a next link or an empty input to process\n")
+            if not link:
+                break
+            user_input += f"{link} "
+        async for result, link, video in AppWorker.get_instance().convert_links_to_videos(user_input):
+            if not result:
+                logger.warning(f"не нашел видео поссылке {link}")
+                continue
+            logger.info(f"нашел видео {video.title}")
+            videos.append(video)
+
     return videos
 
 
@@ -77,60 +67,123 @@ def menu() -> DownloadOptions:
         print("Sorry, you entered a wrong option")
 
 
-async def process_links(save_dir: Path, videos: list[YouTubeVideo]) -> None:
-    """
-    Tries to get captions by YT video link, in case of fail tries to transcribe loaded audio file to text
-    :param save_dir: directory to save the transcribed videos
-    :param videos: list of links
-    :return: None
-    """
-    loader = YouTubeLoader(save_dir)
-    tasks_to_download = [asyncio.create_task(loader.download_audio(video) for video in videos)]
-    download_results = await asyncio.gather(*tasks_to_download, return_exceptions=True)
-
-    worker = None
-    for success, path_ in download_results:
-        if success:
-            if not worker:
-                worker = TranscriberWorker()
-            await worker.transcribe(path_)
-            path_.unlink(missing_ok=True)
+async def cli_task_completion_loop(coroutines: list):
+    for complete_task in asyncio.as_completed(coroutines):
+        result_task: DownloadTask = await complete_task
+        await asyncio.sleep(0.5)
+        if result_task.result:
+            print(f"successfully downloaded: {result_task.video.title} to {result_task.local_path}")
+        else:
+            print(f"failed to download: {result_task.video.title}")
 
 
-async def main() -> None:
-    directory: Path = make_save_dir()
-
-    chooser = input("Please choose the mode: 1 - file, 2 - youtube\n")
-
-    if chooser == "1":
-        logger.info("File mode chosen")
-        source_filename = input(f"please place file in {directory} and write a filename:\n")
-        logger.info(f"Source file name is: {source_filename}")
-        worker = TranscriberWorker()
-        await worker.transcribe(directory / source_filename)
-    elif chooser == "2":
-        videos = await collect_videos()
-        if not videos:
-            print(">> You did not enter any link! <<")
-            return
-        menu_opt = menu()
-        loader = YouTubeLoader(directory)
-        if menu_opt == DownloadOptions.TEXT:
-            remained_videos = []
-            for video in videos:
-                result, path_ = await loader.get_captions(video)
-                if not result:
-                    remained_videos.append(video)
-            if remained_videos:
-                await process_links(directory, remained_videos)
-        elif menu_opt == DownloadOptions.VIDEO:
-            quality = int(input("Enter a quality e.g. 720: "))
-            for video in videos:
-                await loader.download_video(video, required_height=quality)
-        elif menu_opt == DownloadOptions.AUDIO:
-            for video in videos:
-                await loader.download_audio(video)
+async def _download(worker: Callable,
+                    videos: list[YouTubeVideo],
+                    options: VideoOptions | None = None):
+    coroutines = AppWorker.get_instance().launch_coroutines(
+        async_worker=worker,
+        id_="",
+        videos=videos,
+        options=options or VideoOptions(),
+    )
+    await cli_task_completion_loop(coroutines)
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+def get_options_from_user() -> VideoOptions | None:
+    standard_options = OrderedDict()
+    standard_options["1"] = {"message": "144p - 30 fps", "options": "256:144:30"}
+    standard_options["2"] = {"message": "240p - 30 fps", "options": "426:240:30"}
+    standard_options["3"] = {"message": "360p - 30 fps", "options": "640:360:30"}
+    standard_options["4"] = {"message": "480p - 30 fps", "options": "854:480:30"}
+    standard_options["5"] = {"message": "720p - 30 fps", "options": "1280:720:30"}
+    standard_options["6"] = {"message": "720p - 60 fps", "options": "1280:720:60"}
+    standard_options["7"] = {"message": "1080p - 30 fps", "options": "1920:1080:30"}
+    standard_options["8"] = {"message": "1080p - 60 fps", "options": "1920:1080:60"}
+    standard_options["9"] = {"message": "1440p - 30 fps", "options": "2560:1440:30"}
+    standard_options["10"] = {"message": "1440p - 60 fps", "options": "2560:1440:60"}
+    standard_options["11"] = {"message": "2160p - 30 fps", "options": "3840:2160:30"}
+    standard_options["12"] = {"message": "2160p - 60 fps", "options": "3840:2160:60"}
+
+    print("Choose a common option for all videos (applied <= chosen)\n")
+    for k, v in standard_options.items():
+        print(f"{k}: {v['message']}")
+
+    u_option = input()
+    if u_option not in standard_options:
+        print("wrong option, using default...")
+        return None
+    width, height, fps = map(int, standard_options[u_option]["options"].split(":"))
+    return VideoOptions(width=width, height=height, fps=fps)
+
+
+async def get_options_dynamic(video: YouTubeVideo) -> VideoOptions | None:
+    options = await AppWorker.get_instance().get_video_options(video)
+
+    print("Choose an option for downloading:")
+
+    for i, option in enumerate(options, start=1):
+        print(f"{i}: {option.width}x{option.height} fps={option.fps}")
+
+    try:
+        chooser = int(input())
+        if chooser > len(options) or chooser <= 0:
+            raise ValueError
+    except ValueError:
+        print("wrong option, using default...")
+        return None
+
+    return options[chooser - 1]
+
+
+async def _run_cli():
+    parser = get_parser()
+    args = parser.parse_args()
+    config: YAMLConfig = args.config
+    conf_data: BaseConfig = config.data
+    conf_data.bot.server = "local"  # to avoid external storage run
+
+    worker = AppWorker(conf_data)
+
+    chooser = input("Please choose the mode:\n1: transcribe from a file\n2: load from YouTube\n")
+
+    match chooser:
+        case "1":
+            source_filename = input("Please provide an absolute path to file:\n")
+            try:
+                path_ = Path(source_filename)
+                if not path_.is_file():
+                    raise FileNotFoundError
+            except FileNotFoundError:
+                print("file not found")
+                return
+
+            task = TranscriptionTask(id="", origin_path=path_)
+            transcriber = TranscriberWorker(config=conf_data.transcriber)
+            task = await transcriber.transcribe(task)
+            if task.result:
+                logger.info(f"Transcription is saved to {task.local_path}")
+            else:
+                logger.error("Unable to make a transcription")
+        case "2":
+            videos = await collect_videos()
+            if not videos:
+                print(">> You did not enter any link! <<")
+                return
+
+            menu_opt = menu()
+            if menu_opt == DownloadOptions.TEXT:
+                await _download(worker.download_subtitles_worker, videos)
+            elif menu_opt == DownloadOptions.VIDEO:
+                if len(videos) > 1:
+                    options = get_options_from_user()
+                else:
+                    options = await get_options_dynamic(videos[0])
+                await _download(worker.download_video_worker, videos, options)
+            elif menu_opt == DownloadOptions.AUDIO:
+                await _download(worker.download_video_worker, videos)
+        case _:
+            print("Sorry, you entered a wrong option")
+
+
+def cli():
+    asyncio.run(_run_cli())

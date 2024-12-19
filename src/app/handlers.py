@@ -126,7 +126,10 @@ async def file_receiver(message: Message, state: FSMContext):
     elif message.content_type == "document":
         file = message.document
     else:
-        logger.warning(f"{message.from_user.username}:{message.from_user.id}:invalid file type:{message.content_type}")
+        logger.warning("{username}:{user_id}:invalid file type:{type}",
+                       username=message.from_user.username,
+                       user_id=message.from_user.id,
+                       type=message.content_type)
         await message.answer("Упс, кажется такой файл не подойдет ☹️")
         return
 
@@ -153,10 +156,10 @@ async def video_options_handler(callback: CallbackQuery, state: FSMContext):
     logger.info(f"{callback.from_user.username}:{callback.from_user.id}:callback:video_options_handler")
 
     user_state = await state.get_data()
-    if user_state.get("videos") and len(user_state.get("videos")) == 1:
-        options = await AppWorker.get_instance().get_video_options(user_state.get("videos")[0])
+    if "videos" in user_state and len(user_state["videos"]) == 1:
+        options = await AppWorker.get_instance().get_video_options(user_state["videos"][0])
         await callback.message.answer(
-            f"Доступные опции для видео {user_state.get("videos")[0].title}",
+            f"Доступные опции для видео {user_state["videos"][0].title}",
             reply_markup=generate_option_keyboard(options)
         )
         await state.update_data(video_options=options)

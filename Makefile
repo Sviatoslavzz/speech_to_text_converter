@@ -5,13 +5,16 @@ export
 
 run_bot:
 	@echo "Launching telegram bot app"
-	python3 src/bot.py
+	run_bot
 
 run_cli:
 	@echo "Launching cli mode"
-	python3 src/cli.py
+	run_cli
 
 install:
+	pip install -e . -U
+
+install_dev:
 	pip install -e .[dev,test] -U
 
 uninstall_all_dependencies:

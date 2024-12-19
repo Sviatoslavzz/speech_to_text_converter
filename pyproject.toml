@@ -1,6 +1,6 @@
 [project]
 name = "talkushka_service"
-version = "2.0.0"
+version = "2.1.0"
 description = "service is capable of download audio/video/text by youtube video/channel link and transcribe in case transcript is missing"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
@@ -33,8 +33,9 @@ test = [
     "pytest-timeout",
 ]
 
-#[project.scripts]
-#bot = "src.__main__:main"
+[project.scripts]
+run_bot = "bot:main"
+run_cli = "cli:cli"
 
 [tool.ruff]
 line-length = 120

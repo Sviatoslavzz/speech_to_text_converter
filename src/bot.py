@@ -32,7 +32,7 @@ async def start_bot(bot_conf: BotConfig):
         logger.info("Bot session closed.")
 
 
-async def main() -> None:
+async def _run() -> None:
     parser = get_parser()
     args = parser.parse_args()
     config: YAMLConfig = args.config
@@ -42,8 +42,8 @@ async def main() -> None:
     await start_bot(config.data.bot)
 
 
-if __name__ == "__main__":
+def main():
     try:
-        asyncio.run(main())
+        asyncio.run(_run())
     except Exception as e:
         logger.warning(f"Turning off {e.__repr__()}")
