@@ -56,7 +56,7 @@ async def test_form_video_from_link(youtube_api_client, youtube_videos):
     await asyncio.sleep(1)
 
     for link in youtube_videos:
-        result = await youtube_api_client.get_video_by_link(link)
+        result = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
         assert isinstance(result, YouTubeVideo)
         assert result.generate_link() is not None
 
@@ -66,5 +66,5 @@ async def test_form_video_from_link_wrong(youtube_api_client, youtube_videos_wro
     await asyncio.sleep(1)
 
     for link in youtube_videos_wrong:
-        result = await youtube_api_client.get_video_by_link(link)
+        result = await youtube_api_client.get_video_by_id(youtube_api_client.get_video_id(link))
         assert not result

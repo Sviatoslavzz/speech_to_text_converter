@@ -1,0 +1,27 @@
+bot:
+  server: local
+  host: localhost
+  port: 1234
+  token_env: token_env
+youtube:
+  api_key_env: api_key_env
+  heavy_pool_size: 5
+  light_pool_size: 10
+  proxies: ["http://1.1.1.1:1234", "http://1.1.1.2:4321"]
+transcriber:
+  q_size: 200
+  cls: FasterWhisperTranscriber
+  model: small
+storage:
+  q_size: 250
+  storages:
+    - db1:
+        cls: DropBox
+        refresh_token_env: refresh_token_env
+        app_key_env: app_key_env
+        app_secret_env: app_secret_env
+    - db2:
+        cls: DropBox
+        refresh_token_env: refresh_token_env_2
+        app_key_env: app_key_env_2
+        app_secret_env: app_secret_env_2

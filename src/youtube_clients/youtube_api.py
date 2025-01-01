@@ -7,9 +7,26 @@ from objects import YouTubeVideo
 
 
 class YouTubeClient:
+    """
+    Singleton YouTube API client.
+    Official YouTube API libs are used.
+    """
+
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.base_url = "https://www.googleapis.com/youtube/v3"
+        logger.debug("{cls} initialized.", cls=self.__class__.__name__)
+
+    @classmethod
+    def get_instance(cls):
+        return cls._instance
 
     async def get_channel_id_by_link(self, link: str) -> str | None:
         """
@@ -32,12 +49,12 @@ class YouTubeClient:
                     async with session.get(url, params=params) as response:
                         response_json = await response.json()
                         if not (response_json.get("items") and response_json["items"][0]["kind"] == "youtube#channel"):
-                            logger.warning(f"Unable to get channel id from link {link}")
+                            logger.warning("Unable to get channel id by link {link}", link=link)
                             channel_id = None
                         else:
-                            logger.info(f"Found a channel id: {channel_id}")
+                            logger.info("Found a channel id: {ch_id}", ch_id=channel_id)
                 except Exception as error:
-                    logger.error(f"Error during http connection try: {error}")
+                    logger.error("Error during http connection try: {err}", err=error.__repr__())
             elif "@" in link:
                 channel_name = link.split("@")[1]
                 url = f"{self.base_url}/search"
@@ -53,13 +70,13 @@ class YouTubeClient:
                         response_json = await response.json()
                         if response_json.get("items") and response_json["items"][0]["id"]["kind"] == "youtube#channel":
                             channel_id = response_json["items"][0]["id"]["channelId"]
-                            logger.info(f"Found a channel id: {channel_id}")
+                            logger.info("Found a channel id: {ch_id}", ch_id=channel_id)
                         else:
-                            logger.warning(f"Unable to get channel id from link {link}")
+                            logger.warning("Unable to get channel id by link {link}", link=link)
                 except Exception as error:
-                    logger.error(f"Error during http connection try: {error}")
+                    logger.error("Error during http connection try: {err}", err=error.__repr__())
             else:
-                logger.warning(f"Unable to get channel id from link {link}")
+                logger.warning("Unable to get channel id from link {link}", link=link)
 
         return channel_id
 
@@ -80,12 +97,12 @@ class YouTubeClient:
                     response_json = await response.json()
                     if response_json.get("items") and response_json["items"][0]["contentDetails"]:
                         playlist_id = response_json["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
-                        logger.info(f"Got the playlist id: {playlist_id}")
+                        logger.info("Got the playlist id: {playlist_id}", playlist_id=playlist_id)
                     else:
-                        logger.warning(f"Unable to get the playlist id for channel id: {channel_id}")
+                        logger.warning("Unable to get the playlist id for channel id: {ch_id}", ch_id=channel_id)
                         return amount, None
             except Exception as error:
-                logger.error(f"Error during http connection try: {error}")
+                logger.error("Error during http connection try: {err}", err=error.__repr__())
                 return amount, None
 
             url = f"{self.base_url}/playlistItems"
@@ -99,8 +116,10 @@ class YouTubeClient:
                 try:
                     async with session.get(url, params=params) as response:
                         response_json = await response.json()
-                        logger.info(
-                            f"Processing videos from {amount}.. to total: {response_json['pageInfo']['totalResults']}"
+                        logger.debug(
+                            "Processing videos from {amount}.. to total: {total}",
+                            amount=amount,
+                            total=response_json["pageInfo"]["totalResults"]
                         )
                         if response_json["items"] and response_json["items"][0]["snippet"]:
                             for item in response_json["items"]:
@@ -113,12 +132,15 @@ class YouTubeClient:
                                     title=item["snippet"]["title"],
                                     link=None,
                                 )
+                                video.generate_link()
                                 amount += 1
                                 videos.append(video)
                         else:
-                            logger.warning(f"Unable to get video #{amount} info for playlist_id: {playlist_id}")
+                            logger.warning("Unable to get video #{amount} info for playlist_id: {playlist_id}",
+                                           amount=amount,
+                                           playlist_id=playlist_id)
                 except Exception as error:
-                    logger.error(f"Error during http connection try: {error}")
+                    logger.error("Error during http connection try: {err}", err=error.__repr__())
                 next_page_token = response_json.get("nextPageToken")
                 params["pageToken"] = next_page_token
                 if not next_page_token:
@@ -126,20 +148,27 @@ class YouTubeClient:
 
         return amount, videos
 
-    async def get_video_by_link(self, link: str) -> YouTubeVideo | None:
-        patterns = [r"v=([^&]+)", r"shorts/([^&]+)", r"live/([^&]+)"]
-        video_obj = None
+    @staticmethod
+    def get_video_id(link: str) -> str | None:
+        """
+        Search for YouTube link pattern
+        :param link: YouTube link
+        :return: video id
+        """
+        patterns = [r"v=([^&]+)", r"shorts/([^&]+)", r"live/([^&]+)", r"youtu.be/([^?]+)"]
         for pattern in patterns:
             match = re.search(pattern, link)
             if match:
-                video_id = match.group(1)
-                video_obj = await self._form_object_from_video(video_id)
-                break
+                return match.group(1)
 
-        if not video_obj:
-            logger.warning(f"Unable to get video id from link {link}")
+        return None
 
-        return video_obj
+    async def get_video_by_id(self, id_: str) -> YouTubeVideo | None:
+        """
+        :param id_: youtube video id
+        :return: YouTubeVideo instance
+        """
+        return await self._form_object_from_video(id_)
 
     async def _form_object_from_video(self, video_id: str) -> YouTubeVideo | None:
         video = None
@@ -164,10 +193,11 @@ class YouTubeClient:
                             title=response_json["items"][0]["snippet"]["title"],
                             link=None,
                         )
-                        logger.info(f"Got the video by id: {video_id}")
+                        video.generate_link()
+                        logger.info("Found the video by id: {video_id}", video_id=video_id)
                     else:
-                        logger.warning(f"Unable to get video by id: {video_id}")
+                        logger.warning("Unable to get video by id: {video_id}", video_id=video_id)
             except Exception as error:
-                logger.error(f"Error during http connection try: {error}")
+                logger.error("Error during http connection try: {err}", err=error.__repr__())
 
         return video
