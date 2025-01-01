@@ -5,9 +5,8 @@ from typing import TypeVar
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from config.factories import get_storage_cls, get_transcriber_cls
+from config.factory import get_storage_cls
 from objects import MINUTE
-from transcribers.abscract_transcriber import AbstractTranscriber
 from utils import create_saving_dir, validate_db_storages
 
 storage_class = TypeVar("storage_class")  # Todo bound to abstract storage
@@ -108,26 +107,12 @@ class YouTubeConfig(BaseModel):
     def validate_save_dir(cls, value) -> Path:
         return create_saving_dir(value)
 
-
-class TranscriberConfig(BaseModel):
-    q_size: int | None = Field(300, title="Process executor queue size")
-    cls: type[AbstractTranscriber] | None = Field(
-        default_factory=partial(get_transcriber_cls, "FasterWhisperTranscriber"),
-        title="Transcriber class",
-        description="WhisperTranscriber | FasterWhisperTranscriber")
-    model: str | None = Field("small", title="Whisper model")
-    pool_size: int | None = Field(4,
-                                  title="Transcriber worker pool size",
-                                  description="How many transcribe tasks could be run at parallel")
-
-    @field_validator("cls", mode="before")
-    @classmethod
-    def validate_cls(cls, value) -> type[AbstractTranscriber]:
-        return get_transcriber_cls(value)
-
+class GrpcConfig(BaseModel):
+    host: str | None = Field("localhost", title="gRPC server host")
+    port: int | None = Field(50051, title="gRPC server port")
 
 class BaseConfig(BaseModel):
     bot: BotConfig
     youtube: YouTubeConfig
-    transcriber: TranscriberConfig
     storage: StorageConfig
+    grpc: GrpcConfig

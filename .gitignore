@@ -83,3 +83,6 @@ saved_files
 .env
 .python-version
 *.binlog
+
+*.crt
+*.key

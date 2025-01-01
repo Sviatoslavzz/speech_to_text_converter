@@ -1,4 +1,5 @@
 import importlib.metadata as im
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -46,11 +47,37 @@ def validate_db_storages(storages: list):
         raise AssertionError("App secrets must be unique for each DropBox storage")
 
 
+def get_project_root() -> Path:
+    path_ = Path(__file__).parent
+    while path_.name != "src":
+        path_ = path_.parent
+
+    return path_.parent
+
+
 def create_saving_dir(dir_: str) -> Path:
-    absolute_path = Path(__file__).absolute().parent.parent.parent
-    dir_ = Path(f"{absolute_path}/{dir_}")
+    absolute_path = get_project_root()
+    dir_ = absolute_path / dir_
     if not dir_.is_dir():
         dir_.mkdir()
         logger.info(f"Saving directory created: {dir_}")
     logger.info(f"Saving directory set up: {dir_}")
     return dir_
+
+
+def convert_to_m4a(path_: Path) -> tuple[bool, Path]:
+    """
+    Converts any audio/video file to audio .m4a aac format using ffmpeg
+    """
+    new_path = path_.with_suffix(".m4a")
+    command = ["ffmpeg", "-i", path_, "-vn", "-movflags", "+faststart", "-c:a", "aac", "-b:a", "128k", new_path]
+
+    try:
+        subprocess.run(command, check=True)  # noqa S603
+        result = True
+        logger.info("File successfully converted to m4a")
+    except subprocess.CalledProcessError as e:
+        result = False
+        logger.error("Failed to convert to m4a: {err}", err=e.__repr__())
+
+    return result, new_path

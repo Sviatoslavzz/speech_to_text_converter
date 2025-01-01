@@ -3,11 +3,11 @@ from pathlib import Path
 
 import pytest
 from dotenv import load_dotenv
+from transcribers.transcriber_worker import TranscriberWorker
 
-from config.conf_models import DropboxConfig
+from config.models import DropboxConfig
 from executors.process_executor import ProcessExecutor
 from storage.dropbox_storage import DropBox
-from transcribers.transcriber_worker import TranscriberWorker
 from youtube_clients.youtube_api import YouTubeClient
 from youtube_clients.youtube_loader import YouTubeLoader
 

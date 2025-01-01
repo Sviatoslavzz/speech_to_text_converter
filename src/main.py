@@ -8,7 +8,7 @@ from loguru import logger
 from app.handlers import router
 from app_worker import AppWorker
 from config.base import YAMLConfig
-from config.conf_models import BotConfig
+from config.models import BotConfig
 from parser import get_parser
 
 

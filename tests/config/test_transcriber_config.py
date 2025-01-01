@@ -1,9 +1,9 @@
 import pytest
 from pydantic import ValidationError
-
-from config.conf_models import TranscriberConfig
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 from transcribers.whisper_transcriber import WhisperTranscriber
+
+from config.models import TranscriberConfig
 
 
 def test_transcriber_config_default():

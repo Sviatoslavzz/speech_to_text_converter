@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from config.conf_models import DropboxConfig, StorageConfig
+from config.models import DropboxConfig, StorageConfig
 from storage.dropbox_storage import DropBox
 
 

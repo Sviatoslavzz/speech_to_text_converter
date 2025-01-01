@@ -28,7 +28,7 @@ async def task_completion_loop(coroutines: list, callback: CallbackQuery):
                     )
                 )
                 logger.info(f"{callback.message.from_user.id}:file sent")
-                AppWorker.get_instance().remove_file(result_task.local_path)
+                await AppWorker.get_instance().remove_file(result_task.local_path)
         else:
             await callback.message.answer(result_task.message.message["ru"])
 
@@ -55,3 +55,21 @@ async def check_privilege_and_load(callback: CallbackQuery,
                 options=options or VideoOptions(),
         ):
             await task_completion_loop(coroutine, callback)
+
+
+def check_content_type(message):
+    """
+    Checks the content type of the message.
+    :return: file_info or None
+    """
+    if message.content_type == "audio":
+        return message.audio
+    if message.content_type == "video":
+        return message.video
+    if message.content_type == "document":
+        return message.document
+    logger.warning("{username}:{user_id}:invalid file type:{type}",
+                   username=message.from_user.username,
+                   user_id=message.from_user.id,
+                   type=message.content_type)
+    return None

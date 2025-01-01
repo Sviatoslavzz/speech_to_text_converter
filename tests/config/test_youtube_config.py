@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from config.conf_models import YouTubeConfig
+from config.models import YouTubeConfig
 
 
 def test_youtube_config_default():

@@ -23,7 +23,7 @@ from app.replies import (
     provide_links,
     welcome_message,
 )
-from app.support_handlers import check_privilege_and_load, task_completion_loop
+from app.support_handlers import check_content_type, check_privilege_and_load, task_completion_loop
 from app_worker import AppWorker
 from objects import (
     DownloadOptions,
@@ -115,40 +115,26 @@ async def video_handler_links(message: Message, state: FSMContext):
 
 @router.message(UserRoute.file)
 async def file_receiver(message: Message, state: FSMContext):
-    logger.info(f"{message.from_user.username}:{message.from_user.id}:file_receiver")
+    logger.info("{user}:{id}:file_receiver", user=message.from_user.username, id=message.from_user.id)
 
     await state.clear()
 
-    if message.content_type == "audio":
-        file = message.audio
-    elif message.content_type == "video":
-        file = message.video
-    elif message.content_type == "document":
-        file = message.document
-    else:
-        logger.warning("{username}:{user_id}:invalid file type:{type}",
-                       username=message.from_user.username,
-                       user_id=message.from_user.id,
-                       type=message.content_type)
+    file = check_content_type(message)
+    if not file:
         await message.answer("Упс, кажется такой файл не подойдет ☹️")
         return
 
     await message.answer("Принято в работу!")
-    try:
-        task = await AppWorker.get_instance().create_transcription_task(message, file)
-        result_tasks = await AppWorker.get_instance().run_transcriber_executor([task])
 
-        for r_task in result_tasks:
-            if r_task.result:
-                await message.answer_document(FSInputFile(r_task.local_path))
-                logger.info(f"{message.from_user.id}:file sent")
-                AppWorker.get_instance().remove_file(r_task.origin_path)
-                AppWorker.get_instance().remove_file(r_task.local_path)
-            else:
-                await message.answer("К сожалению, что-то пошло не так и я не смог сделать транскрибацию 😓")
-    except Exception as e:
-        logger.error(f"{message.from_user.username}:{message.from_user.id}:{file.file_id}:{e.__repr__()}")
-        await message.answer("Упс, что-то пошло не так!")
+    status, text_file_path = await AppWorker.get_instance().request_transcription_api(message, file)
+    if status:
+        await message.answer_document(FSInputFile(text_file_path))
+        await AppWorker.get_instance().remove_file(text_file_path)
+        logger.info("{user}:{id}:transcription sent", user=message.from_user.username, id=message.from_user.id)
+    else:
+        await message.answer("К сожалению, сервис транскрибации недоступен в данный момент 😓")
+        logger.warning("{user}:{id}:failed to sent transcription", user=message.from_user.username,
+                       id=message.from_user.id)
 
 
 @router.callback_query(F.data == "download_video", UserRoute.action)

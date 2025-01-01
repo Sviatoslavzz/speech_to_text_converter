@@ -50,16 +50,6 @@ class VideoOptions:
 
 
 @dataclass(slots=True)
-class TranscriptionTask:
-    id: str
-    message: AppMessage = field(default_factory=AppMessage)
-    local_path: Path | None = None
-    result: bool | None = False
-    file_size: int | None = None
-    origin_path: Path | None = None
-
-
-@dataclass(slots=True)
 class DownloadTask:
     id: str
     video: YouTubeVideo

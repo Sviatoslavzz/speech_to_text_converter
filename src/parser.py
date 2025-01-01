@@ -4,7 +4,7 @@ from pathlib import Path
 from loguru import logger
 
 from config.base import ConfigModelType, YAMLConfig
-from config.conf_models import BaseConfig
+from config.models import BaseConfig
 from utils import get_version
 
 

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from config.conf_models import BotConfig
+from config.models import BotConfig
 
 
 def test_bot_config_default():

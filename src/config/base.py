@@ -3,7 +3,7 @@ from typing import TypeVar
 
 import yaml
 
-from config.conf_models import BaseConfig
+from config.models import BaseConfig
 
 ConfigModelType = TypeVar("ConfigModelType", bound=BaseConfig)
 

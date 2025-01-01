@@ -1,14 +1,11 @@
 [project]
 name = "talkushka_service"
-version = "2.1.0"
-description = "service is capable of download audio/video/text by youtube video/channel link and transcribe in case transcript is missing"
+version = "2.2.0"
+description = "telegram bot service that is capable of download audio/video/text by youtube video/channel link, part of talkushka ecosystem"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
 
 dependencies = [
-    "openai_whisper==20231117",
-    "faster-whisper>=1.0.3",
-    "numpy<2",
     "yt_dlp>=2024.7.9",
     "youtube-transcript-api>=0.6.2",
     "google-api-core>=2.19.1",
@@ -19,13 +16,18 @@ dependencies = [
     "aiogram<14",
     "dropbox==12.0.2",
     "setproctitle~=1.3",
-    "python-dotenv"
+    "python-dotenv",
+    "pydantic~=2.9.2",
+    "aiofiles",
+    "grpcio-tools",
+    "pyyaml"
 ]
 requires-python = ">=3.12"
 
 [project.optional-dependencies]
 dev = [
-    "ruff~=0.8.0"
+    "ruff~=0.8.0",
+    "betterproto[compiler,rust-codec]==2.0.0b7"
 ]
 test = [
     "pytest>=8.0.0,<9.0.0",
@@ -34,8 +36,7 @@ test = [
 ]
 
 [project.scripts]
-run_bot = "bot:main"
-run_cli = "cli:cli"
+run_bot = "main:main"
 
 [tool.ruff]
 line-length = 120
@@ -102,6 +103,7 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "ANN001", "ANN201", "PLR2004", "INP001", "S105"]
 "conftest.py" = ["S101", "ANN001", "ANN201"]
+"src/proto_gen/*" = ["RUF009", "F401", "UP035"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

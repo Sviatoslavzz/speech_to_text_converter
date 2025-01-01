@@ -4,15 +4,16 @@ import re
 from collections.abc import AsyncGenerator, Callable
 from pathlib import Path
 
+import aiofiles.os
 from loguru import logger
 
-from config.conf_models import BaseConfig
+from config.models import BaseConfig
 from executors.process_executor import ProcessExecutor
 from executors.storage_executor import StorageExecutor
-from executors.transcriber_executor import TranscriberExecutor
-from objects import MB, DownloadTask, TranscriptionTask, VideoOptions, YouTubeVideo
+from grpc_service.client import GrpcClient
+from objects import MB, DownloadTask, VideoOptions, YouTubeVideo
 from storage.storage_worker import storage_worker_as_target
-from transcribers.transcriber_worker import transcriber_worker_as_target
+from utils import convert_to_m4a
 from youtube_clients.youtube_api import YouTubeClient
 from youtube_clients.youtube_loader import YouTubeLoader
 
@@ -36,6 +37,11 @@ class AppWorker:
                                     light_pool_size=self.config.youtube.light_pool_size,
                                     proxy=self.config.youtube.proxies or None)
 
+        # semaphore is limiting the number of threads that awaits separate process queue results
+        self.semaphore = asyncio.Semaphore(self.config.youtube.light_pool_size * 2)
+        self.sem_queue_size = 0
+        self.grpc_client = GrpcClient(self.config.grpc)
+
         logger.debug("{cls} initialized", cls=self.__class__.__name__)
 
     @classmethod
@@ -43,9 +49,9 @@ class AppWorker:
         return cls._instance
 
     @staticmethod
-    def remove_file(file: Path) -> None:
+    async def remove_file(file: Path) -> None:
         try:
-            file.unlink()
+            await aiofiles.os.unlink(file)
         except FileNotFoundError:
             logger.error("File not found : unable to remove {f_name}", f_name=file.__fspath__())
 
@@ -93,17 +99,17 @@ class AppWorker:
         amount, videos = await self.youtube_client.get_channel_videos(channel_id)
         return True, amount, videos
 
-    async def check_file_size(self, task: DownloadTask | TranscriptionTask) -> DownloadTask | TranscriptionTask:
+    async def check_file_size(self, task: DownloadTask) -> DownloadTask:
         """
         If files size exceeds limit sends Task to StorageExecutor.
-        :param task: DownloadTask or TranscriptionTask
-        :return: DownloadTask or TranscriptionTask
+        :param task: DownloadTask
+        :return: DownloadTask
         """
         if self.config.bot.server == "telegram" and task.result and task.file_size > 50 * MB:
             if not self.config.storage.storages:
                 task.result = False
                 task.message.message = {"ru": "К сожалению, невозможно передать файл больше 50 мб."}
-                self.remove_file(task.local_path)
+                await self.remove_file(task.local_path)
                 logger.error("Failed attempt to transfer file > 50 MB directly to TG without storage.\n"
                              "Please set up at least 1 storage or use local server.")
                 return task
@@ -149,71 +155,64 @@ class AppWorker:
 
         return await self.check_file_size(task)
 
-    async def create_transcription_task(self, message, file) -> TranscriptionTask:
+    async def request_transcription_api(self, message, file) -> tuple[bool, Path | None]:
         """
-        Loads file from telegram server.
-        Creates transcription task.
+        Downloads file from tg to local.
+        Converts file to .m4a.
+        Streams a file to 'talkushka_whisper' service via gRPC.
         :param message: aiogram Message
         :param file: aiogram File
-        :return: TranscriptionTask
+        :return: (bool status, Path to text file)
         """
-        file_info = await message.bot.get_file(file.file_id)  # если локально - то ждет полной загрузки
+
+        if not await self.grpc_client.connected:
+            return False, None
+
+        # waits for complete load in case of 'local' tg server
+        file_info = await message.bot.get_file(file.file_id)
 
         if self.config.bot.server == "telegram":
-            task = TranscriptionTask(
-                origin_path=self.config.youtube.save_dir / f"{message.message_id!s}_{file.file_name}",
-                id=f"{message.from_user.id}{message.message_id}"
-            )
-            await message.bot.download_file(file_info.file_path, destination=task.origin_path)
+            local_path = self.config.youtube.save_dir / f"{message.message_id!s}_{file.file_name}"
+            await message.bot.download_file(file_info.file_path, destination=local_path)
         else:
-            task = TranscriptionTask(
-                origin_path=Path(file_info.file_path),
-                id=f"{message.from_user.id}{message.message_id}",
-            )
+            local_path = Path(file_info.file_path)
 
-        return task
+        self.sem_queue_size += 1
+        async with self.semaphore:
+            self.sem_queue_size -= 1
+            logger.info("{cls} : tasks waiting in semaphore {size}",
+                        cls=self.__class__.__name__,
+                        size=self.sem_queue_size)
+            status, audio_file_path = await asyncio.to_thread(convert_to_m4a, local_path)
 
-    @staticmethod
-    async def submit_task(
-            executor: ProcessExecutor, task_: TranscriptionTask | DownloadTask
-    ) -> TranscriptionTask | DownloadTask:
+        await self.remove_file(local_path)
+
+        if not status:
+            return False, None
+
+        return await self.grpc_client.stream_audio_file(audio_file_path)
+
+    async def submit_task(self, executor: ProcessExecutor, task_: DownloadTask) -> DownloadTask:
         """
         Transfer a task to executor and waits for the result in a separate thread
         :param executor: ProcessExecutor
-        :param task_: TranscriptionTask | DownloadTask
+        :param task_: DownloadTask
         """
-        executor.put_task(task_)
-        while True:
-            result = await asyncio.to_thread(executor.get_result)
-            if result:
-                if task_.id == result.id:
-                    return result
-                executor.put_result(result)
+        self.sem_queue_size += 1
+        async with self.semaphore:
+            self.sem_queue_size -= 1
+            logger.info("{cls} : tasks waiting in semaphore {size}",
+                        cls=self.__class__.__name__,
+                        size=self.sem_queue_size)
+            executor.put_task(task_)
+            while True:
+                result = await asyncio.to_thread(executor.get_result)
+                if result:
+                    if task_.id == result.id:
+                        return result
+                    executor.put_result(result)
 
-            await asyncio.sleep(0.1)
-
-    async def run_transcriber_executor(self, tasks: list[TranscriptionTask]) -> list[TranscriptionTask]:
-        """
-        Runs transcriber in a separate process,
-        puts transcription tasks to process Queue,
-        and asynchronously wait for results
-        Returns: list of TranscriptionTask
-        """
-        executor = TranscriberExecutor.get_instance()
-        if not executor:
-            executor = TranscriberExecutor(transcriber_worker_as_target, config=self.config.transcriber)
-            executor.configure(
-                q_size=self.config.transcriber.q_size,
-                context="spawn" if IS_MACOS else "fork",
-                process_name="python_transcriber_worker"
-            )
-            executor.set_name("transcriber_worker")
-            executor.start()
-
-        async_tasks = [asyncio.create_task(self.submit_task(executor, task)) for task in tasks]
-        process_result = await asyncio.gather(*async_tasks)
-
-        return list(process_result)
+                await asyncio.sleep(0.1)
 
     async def run_storage_executor(self, tasks: list[DownloadTask]) -> list[DownloadTask]:
         """
