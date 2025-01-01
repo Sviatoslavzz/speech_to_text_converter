@@ -9,10 +9,6 @@ run_bot:
 	@echo "Launching telegram bot app"
 	run_bot
 
-run_cli:
-	@echo "Launching cli mode"
-	run_cli
-
 install:
 	pip install -e . -U
 
@@ -25,6 +21,12 @@ uninstall_all_dependencies:
 
 gen_whisper_proto: $(WHISPER_PROTO_DIR)
 	python -m grpc_tools.protoc -I . --python_betterproto_out=$(WHISPER_PROTO_DIR) proto/whisper/talkushka_whisper.proto
+
+gen_client_cert:
+	openssl genrsa -out cert/client.key 4096
+	openssl req -new -key cert/client.key -out cert/client.csr \
+	-subj "/C=RU/ST=State/L=City/O=Organization/OU=ClientUnit/CN=talkushka"
+	openssl x509 -req -in cert/client.csr -CA cert/ca.crt -CAkey cert/ca.key -CAcreateserial -out cert/client.crt -days 365 -sha256
 
 test:
 	pytest tests/

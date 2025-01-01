@@ -107,9 +107,13 @@ class YouTubeConfig(BaseModel):
     def validate_save_dir(cls, value) -> Path:
         return create_saving_dir(value)
 
+
 class GrpcConfig(BaseModel):
     host: str | None = Field("localhost", title="gRPC server host")
     port: int | None = Field(50051, title="gRPC server port")
+    channel_idle_time: int | None = Field(10, title="Channel idle time in minutes",
+                                          description="time to have channel opened without usage")
+
 
 class BaseConfig(BaseModel):
     bot: BotConfig
