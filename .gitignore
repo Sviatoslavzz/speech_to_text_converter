@@ -86,3 +86,4 @@ saved_files
 
 *.crt
 *.key
+*.csr

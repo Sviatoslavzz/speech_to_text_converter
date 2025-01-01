@@ -16,7 +16,7 @@ async def task_completion_loop(coroutines: list, callback: CallbackQuery):
             if result_task.storage_link:
                 await callback.message.answer(
                     f"""💥 Видео: {result_task.video.title}
-Прикрепляю ссылку на внешнее хранилище, действует 5 минут\n{result_task.storage_link}""",
+Прикрепляю ссылку на внешнее хранилище, {result_task.message.message["ru"]}\n{result_task.storage_link}""",
                     link_preview_options=LinkPreviewOptions(is_disabled=True),
                 )
                 logger.info(f"{callback.message.from_user.id}:link to storage sent")

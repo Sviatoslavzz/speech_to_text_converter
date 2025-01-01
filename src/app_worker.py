@@ -105,7 +105,7 @@ class AppWorker:
         :param task: DownloadTask
         :return: DownloadTask
         """
-        if self.config.bot.server == "telegram" and task.result and task.file_size > 50 * MB:
+        if task.result and self.config.bot.server == "telegram" and task.file_size > 50 * MB:
             if not self.config.storage.storages:
                 task.result = False
                 task.message.message = {"ru": "К сожалению, невозможно передать файл больше 50 мб."}

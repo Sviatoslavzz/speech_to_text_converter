@@ -39,6 +39,10 @@ class DropBox:
 
         self.pool = ThreadPoolExecutor(max_workers=20)
 
+    @property
+    def storage_time(self):
+        return self._storage_time
+
     def check_auth_tokens(self) -> None:
         if not (self._refresh_token and self._app_key and self._secret):
             logger.error(f"{self.__class__.__name__} accepts exactly 3 tokens: refresh_token, app_key, secret")

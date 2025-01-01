@@ -30,12 +30,12 @@ class StorageWorker:
         return cls._instance
 
     def __init__(self, config: list[DropboxConfig]):
-        logger.info(f"{self.__class__.__name__}: Initializing...")
         self.storages = [Storage(cls=storage_conf.cls(**storage_conf.model_dump(exclude={"cls"}))) for storage_conf in
                          config]
         self._connected = False
         self._initialize_storages()
         self.timer = time.time()
+        logger.debug("{cls}: initialized", cls=self.__class__.__name__)
 
     @classmethod
     def get_instance(cls):
@@ -86,6 +86,7 @@ class StorageWorker:
         else:
             try:
                 task.storage_link = await self.storages[0].cls.upload(task.local_path)
+                task.message.message["ru"] = f"ссылка действует {self.storages[0].cls.storage_time} минут"
                 task.local_path.unlink(missing_ok=True)
             except Exception:
                 task.message.message["ru"] = "Не получилось загрузить файл во внешнее хранилище."
