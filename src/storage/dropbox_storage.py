@@ -30,6 +30,7 @@ class DropBox:
         self._token_timer: float = 0
         self._storage: dict[str, float] = {}
         self._storage_time = storage_time
+        logger.debug(f"storage_time={storage_time}")
         self._connected = False
 
         self._refresh_token = refresh_token_env
@@ -153,7 +154,7 @@ class DropBox:
     @_async_wrap
     def timer_delete(self):
         for file in list(self._storage):
-            if self._storage.get(file, False) and time.time() - self._storage[file] > self._storage_time:
+            if time.time() - self._storage[file] > self._storage_time:
                 logger.info(f"Found expired file {file}, appkey:{self._app_key}")
                 self._storage.pop(file, None)
                 self.delete(file)

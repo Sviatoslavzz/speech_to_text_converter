@@ -16,7 +16,7 @@ class DropboxConfig(BaseModel):
     cls: type[storage_class] | None = Field(default_factory=partial(get_storage_cls, "DropBox"),
                                             title="Storage class",
                                             description="DropBox")
-    storage_time: float | None = Field(default=5 * MINUTE, title="Storage time")
+    storage_time: float | None = Field(default=5, title="Storage time in minutes")
     refresh_token_env: str = Field(..., title="Environment variable name")
     app_key_env: str = Field(..., title="Environment variable name")
     app_secret_env: str = Field(..., title="Environment variable name")
@@ -25,6 +25,11 @@ class DropboxConfig(BaseModel):
     @classmethod
     def __validate_cls(cls, value) -> type[storage_class]:
         return get_storage_cls(value)
+
+    @field_validator("storage_time", mode="before")
+    @classmethod
+    def __validate_storage_time(cls, value) -> type[storage_class]:
+        return value * MINUTE
 
     @field_validator("refresh_token_env", mode="before")
     @classmethod
