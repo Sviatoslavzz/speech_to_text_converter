@@ -229,6 +229,7 @@ class AppWorker:
                                process_name="python_storage_worker")
             executor.set_name("storage_worker")
             executor.start()
+            await asyncio.sleep(1)  # there is 1 sec sleep on storage worker to start
 
         async_tasks = [asyncio.create_task(self.submit_task(executor, task)) for task in tasks]
         process_result = await asyncio.gather(*async_tasks)

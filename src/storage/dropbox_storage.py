@@ -30,7 +30,6 @@ class DropBox:
         self._token_timer: float = 0
         self._storage: dict[str, float] = {}
         self._storage_time = storage_time
-        logger.debug(f"storage_time={storage_time}")
         self._connected = False
 
         self._refresh_token = refresh_token_env

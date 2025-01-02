@@ -86,7 +86,8 @@ class StorageWorker:
         else:
             try:
                 task.storage_link = await self.storages[0].cls.upload(task.local_path)
-                task.message.message["ru"] = f"ссылка действует {self.storages[0].cls.storage_time} минут"
+                task.message.message["ru"] = \
+                    f"ссылка действует {round(self.storages[0].cls.storage_time // MINUTE, 0)} минут"
                 task.local_path.unlink(missing_ok=True)
             except Exception:
                 task.message.message["ru"] = "Не получилось загрузить файл во внешнее хранилище."

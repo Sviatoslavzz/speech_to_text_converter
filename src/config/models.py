@@ -16,7 +16,7 @@ class DropboxConfig(BaseModel):
     cls: type[storage_class] | None = Field(default_factory=partial(get_storage_cls, "DropBox"),
                                             title="Storage class",
                                             description="DropBox")
-    storage_time: float | None = Field(default=5, title="Storage time in minutes")
+    storage_time: float | None = Field(default=5 * MINUTE, title="Storage time in minutes")
     refresh_token_env: str = Field(..., title="Environment variable name")
     app_key_env: str = Field(..., title="Environment variable name")
     app_secret_env: str = Field(..., title="Environment variable name")
