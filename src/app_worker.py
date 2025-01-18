@@ -225,7 +225,7 @@ class AppWorker:
         if not executor:
             executor = StorageExecutor(storage_worker_as_target, config=self.config.storage.storages)
             executor.configure(q_size=self.config.storage.q_size,
-                               context="spawn" if IS_MACOS else "fork",
+                               # context="spawn" if IS_MACOS else "fork",
                                process_name="python_storage_worker")
             executor.set_name("storage_worker")
             executor.start()
