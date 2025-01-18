@@ -123,7 +123,6 @@ async def storage_worker_as_target(task: DownloadTask | None,
     if not sw:
         # TODO shared memory config
         sw = StorageWorker(list(config.values()))
-        time.sleep(1)  # blocking pause to wait for StorageWorker init
         await sw.update_space()
 
     if task and task.local_path:
