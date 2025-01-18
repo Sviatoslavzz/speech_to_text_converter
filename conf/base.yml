@@ -1,6 +1,6 @@
 bot:
   server: telegram
-  token_env: TG_TOKEN
+  token_env: TG_BOT_TOKEN
 youtube:
   api_key_env: YOUTUBE_API
   heavy_pool_size: 20
@@ -21,6 +21,6 @@ storage:
         app_key_env: DROPBOX_APP_KEY_2
         app_secret_env: DROPBOX_APP_SECRET_2
 grpc:
-  host: "5.35.115.35"
+  host: "95.24.105.21"
   port: 50051
-  channel_idle_time: 15
+  channel_idle_time: 5
