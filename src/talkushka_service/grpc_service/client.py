@@ -11,10 +11,10 @@ import aiofiles.os
 from grpclib.client import Channel
 from loguru import logger
 
-from config.models import GrpcConfig
-from objects import MB, MINUTE
-from proto_gen.whisper import AudioChunk, AudioTransferStub, HealthCheckRequest
-from utils import get_project_root
+from talkushka_service.config.models import GrpcConfig
+from talkushka_service.objects import MB, MINUTE
+from talkushka_service.proto_gen.whisper import AudioChunk, AudioTransferStub, HealthCheckRequest
+from talkushka_service.utils import get_project_root
 
 
 class GrpcClient:
@@ -94,7 +94,7 @@ class GrpcClient:
         """
 
         async def generate_chunks() -> AsyncIterator[AudioChunk]:
-            logger.info("Generating chunks for sending to gRPC whisper server")
+            logger.debug("Generating chunks for sending to gRPC whisper server")
             nonlocal path_
             async with aiofiles.open(path_, "rb") as audio_file:
                 while True:
@@ -104,7 +104,7 @@ class GrpcClient:
                     yield AudioChunk(
                         payload=chunk_data,
                     )
-            logger.info("Chunks are successfully sent to gRPC whisper server")
+            logger.debug("Chunks are successfully sent to gRPC whisper server")
 
         res = False
         async with aiofiles.open(path_.with_suffix(".txt"), "wb") as text_file:

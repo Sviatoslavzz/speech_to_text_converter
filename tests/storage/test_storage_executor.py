@@ -2,9 +2,9 @@ import asyncio
 
 import pytest
 
-from app_worker import run_storage_executor
-from executors.storage_executor import StorageExecutor
-from objects import DownloadTask, VideoOptions, YouTubeVideo
+from talkushka_service.app_worker import run_storage_executor
+from talkushka_service.executors.storage_executor import StorageExecutor
+from talkushka_service.objects import DownloadTask, VideoOptions, YouTubeVideo
 
 
 @pytest.mark.skip(reason="Requires changing storage timeout ~45 recommended")

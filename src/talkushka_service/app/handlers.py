@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions, Message
 from loguru import logger
 
-from app.keyboards import (
+from talkushka_service.app.keyboards import (
     action_menu,
     generate_option_keyboard,
     main_menu,
@@ -14,7 +14,7 @@ from app.keyboards import (
     proceed_simple_menu,
     standard_video_options_menu,
 )
-from app.replies import (
+from talkushka_service.app.replies import (
     choose_channel_button,
     choose_file_button,
     choose_video_button,
@@ -23,9 +23,9 @@ from app.replies import (
     provide_links,
     welcome_message,
 )
-from app.support_handlers import check_content_type, check_privilege_and_load, task_completion_loop
-from app_worker import AppWorker
-from objects import (
+from talkushka_service.app.support_handlers import check_content_type, check_privilege_and_load, task_completion_loop
+from talkushka_service.app_worker import AppWorker
+from talkushka_service.objects import (
     DownloadOptions,
     DownloadTask,
     UserRoute,
@@ -143,7 +143,9 @@ async def video_options_handler(callback: CallbackQuery, state: FSMContext):
 
     user_state = await state.get_data()
     if "videos" in user_state and len(user_state["videos"]) == 1:
+        sent = await callback.message.answer("Ищу доступные опции для видео..")
         options = await AppWorker.get_instance().get_video_options(user_state["videos"][0])
+        await sent.delete()
         await callback.message.answer(
             f"Доступные опции для видео {user_state["videos"][0].title}",
             reply_markup=generate_option_keyboard(options)
@@ -161,7 +163,9 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
     user_state = await state.get_data()
     videos = user_state.get("videos", [])
     if callback.data == "single_option" and videos:
+        sent = await callback.message.answer("Ищу доступные опции для видео..")
         options = await AppWorker.get_instance().get_video_options(videos[0])
+        await sent.delete()
         await callback.message.answer(
             f"Доступные опции для видео {videos[0].title}", reply_markup=generate_option_keyboard(options)
         )

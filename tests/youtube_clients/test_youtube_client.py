@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from objects import YouTubeVideo
+from talkushka_service.objects import YouTubeVideo
 
 
 @pytest.mark.asyncio

@@ -5,11 +5,11 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 from loguru import logger
 
-from app.handlers import router
-from app_worker import AppWorker
-from config.base import YAMLConfig
-from config.models import BotConfig
-from parser import get_parser
+from talkushka_service.app.handlers import router
+from talkushka_service.app_worker import AppWorker
+from talkushka_service.config.base import YAMLConfig
+from talkushka_service.config.models import BotConfig
+from talkushka_service.parser import get_parser
 
 
 async def start_bot(bot_conf: BotConfig):

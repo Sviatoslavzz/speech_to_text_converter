@@ -3,8 +3,8 @@ import time
 
 import pytest
 
-from objects import DownloadTask, VideoOptions, YouTubeVideo
-from storage.storage_worker import StorageWorker, storage_worker_as_target
+from talkushka_service.objects import DownloadTask, VideoOptions, YouTubeVideo
+from talkushka_service.storage import StorageWorker, storage_worker_as_target
 
 
 def test_launch(dropbox_conf):

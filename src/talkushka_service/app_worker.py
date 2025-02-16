@@ -7,15 +7,15 @@ from pathlib import Path
 import aiofiles.os
 from loguru import logger
 
-from config.models import BaseConfig
-from executors.process_executor import ProcessExecutor
-from executors.storage_executor import StorageExecutor
-from grpc_service.client import GrpcClient
-from objects import MB, DownloadTask, VideoOptions, YouTubeVideo
-from storage.storage_worker import storage_worker_as_target
-from utils import convert_to_m4a
-from youtube_clients.youtube_api import YouTubeClient
-from youtube_clients.youtube_loader import YouTubeLoader
+from talkushka_service.config.models import BaseConfig
+from talkushka_service.executors.process_executor import ProcessExecutor
+from talkushka_service.executors.storage_executor import StorageExecutor
+from talkushka_service.grpc_service.client import GrpcClient
+from talkushka_service.objects import MB, DownloadTask, VideoOptions, YouTubeVideo
+from talkushka_service.storage.storage_worker import storage_worker_as_target
+from talkushka_service.utils import convert_to_m4a
+from talkushka_service.youtube_clients.youtube_api import YouTubeClient
+from talkushka_service.youtube_clients.youtube_loader import YouTubeLoader
 
 IS_MACOS = platform.system() == "Darwin"
 

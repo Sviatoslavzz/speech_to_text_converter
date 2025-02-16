@@ -3,7 +3,7 @@ import re
 from aiohttp import ClientSession
 from loguru import logger
 
-from objects import YouTubeVideo
+from talkushka_service.objects import YouTubeVideo
 
 
 class YouTubeClient:
@@ -36,63 +36,65 @@ class YouTubeClient:
         """
         channel_id = None
 
-        async with ClientSession() as session:
-            if "channel/" in link:
-                channel_id = link.split("channel/")[1]
-                url = f"{self.base_url}/channels"
-                params = {
-                    "part": "id",
-                    "id": channel_id,
-                    "key": self.api_key,
-                }
-                try:
-                    async with session.get(url, params=params) as response:
-                        response_json = await response.json()
-                        if not (response_json.get("items") and response_json["items"][0]["kind"] == "youtube#channel"):
-                            logger.warning("Unable to get channel id by link {link}", link=link)
-                            channel_id = None
-                        else:
-                            logger.info("Found a channel id: {ch_id}", ch_id=channel_id)
-                except Exception as error:
-                    logger.error("Error during http connection try: {err}", err=error.__repr__())
-            elif "@" in link:
-                channel_name = link.split("@")[1]
-                url = f"{self.base_url}/search"
-                params = {
-                    "part": "id",
-                    "q": channel_name,
-                    "type": "channel",
-                    "maxResults": 1,
-                    "key": self.api_key,
-                }
-                try:
-                    async with session.get(url, params=params) as response:
-                        response_json = await response.json()
-                        if response_json.get("items") and response_json["items"][0]["id"]["kind"] == "youtube#channel":
-                            channel_id = response_json["items"][0]["id"]["channelId"]
-                            logger.info("Found a channel id: {ch_id}", ch_id=channel_id)
-                        else:
-                            logger.warning("Unable to get channel id by link {link}", link=link)
-                except Exception as error:
-                    logger.error("Error during http connection try: {err}", err=error.__repr__())
-            else:
-                logger.warning("Unable to get channel id from link {link}", link=link)
+        try:
+            async with ClientSession() as session:
+                if "channel/" in link:
+                    channel_id_ = link.split("channel/")[1]
+                    url = f"{self.base_url}/channels"
+                    params = {
+                        "part": "id",
+                        "id": channel_id_,
+                        "key": self.api_key,
+                    }
+                elif "@" in link:
+                    channel_name = link.split("@")[1]
+                    url = f"{self.base_url}/search"
+                    params = {
+                        "part": "id",
+                        "q": channel_name,
+                        "type": "channel",
+                        "maxResults": 1,
+                        "key": self.api_key,
+                    }
+                else:
+                    logger.warning("Unable to get channel id or name from link {link}", link=link)
+                    return channel_id
+
+                async with session.get(url, params=params) as response:
+                    response_json = await response.json()
+                    if not response_json.get("items"):
+                        logger.warning("Unable to get channel id by link {link}", link=link)
+                        return channel_id
+
+                    if response_json["items"][0]["kind"] == "youtube#channel":
+                        channel_id = response_json["items"][0]["id"]
+                        logger.debug("Found a channel id: {ch_id}", ch_id=channel_id)
+                    elif response_json["items"][0]["kind"] == "youtube#searchResult" \
+                            and response_json["items"][0]["id"]["kind"] == "youtube#channel":
+                        channel_id = response_json["items"][0]["id"]["channelId"]
+                        logger.debug("Found a channel id: {ch_id}", ch_id=channel_id)
+                    else:
+                        logger.warning("Unable to get channel id by link {link}", link=link)
+
+        except Exception as error:
+            logger.error("Error during http connection try: {err}", err=error.__repr__())
 
         return channel_id
 
     async def get_channel_videos(self, channel_id: str) -> tuple[int, list[YouTubeVideo] | None]:
         videos = []
         amount = 0
-        logger.info("Collecting video links process started...")
+        logger.debug("Collecting video links process started...")
 
-        async with ClientSession() as session:
-            url = f"{self.base_url}/channels"
-            params = {
-                "part": "contentDetails",
-                "id": channel_id,
-                "key": self.api_key,
-            }
-            try:
+        try:
+            async with ClientSession() as session:
+                url = f"{self.base_url}/channels"
+                params = {
+                    "part": "contentDetails",
+                    "id": channel_id,
+                    "key": self.api_key,
+                }
+
                 async with session.get(url, params=params) as response:
                     response_json = await response.json()
                     if response_json.get("items") and response_json["items"][0]["contentDetails"]:
@@ -101,19 +103,15 @@ class YouTubeClient:
                     else:
                         logger.warning("Unable to get the playlist id for channel id: {ch_id}", ch_id=channel_id)
                         return amount, None
-            except Exception as error:
-                logger.error("Error during http connection try: {err}", err=error.__repr__())
-                return amount, None
 
-            url = f"{self.base_url}/playlistItems"
-            params = {
-                "part": "snippet",
-                "playlistId": playlist_id,
-                "maxResults": 50,
-                "key": self.api_key,
-            }
-            while True:
-                try:
+                url = f"{self.base_url}/playlistItems"
+                params = {
+                    "part": "snippet",
+                    "playlistId": playlist_id,
+                    "maxResults": 50,
+                    "key": self.api_key,
+                }
+                while True:
                     async with session.get(url, params=params) as response:
                         response_json = await response.json()
                         logger.debug(
@@ -139,12 +137,13 @@ class YouTubeClient:
                             logger.warning("Unable to get video #{amount} info for playlist_id: {playlist_id}",
                                            amount=amount,
                                            playlist_id=playlist_id)
-                except Exception as error:
-                    logger.error("Error during http connection try: {err}", err=error.__repr__())
-                next_page_token = response_json.get("nextPageToken")
-                params["pageToken"] = next_page_token
-                if not next_page_token:
-                    break
+                    next_page_token = response_json.get("nextPageToken")
+                    params["pageToken"] = next_page_token
+                    if not next_page_token:
+                        break
+        except Exception as error:
+            logger.error("Error during http connection try: {err}", err=error.__repr__())
+            return amount, None
 
         return amount, videos
 
@@ -173,14 +172,14 @@ class YouTubeClient:
     async def _form_object_from_video(self, video_id: str) -> YouTubeVideo | None:
         video = None
 
-        async with ClientSession() as session:
-            url = f"{self.base_url}/videos"
-            params = {
-                "part": "snippet",
-                "id": video_id,
-                "key": self.api_key,
-            }
-            try:
+        try:
+            async with ClientSession() as session:
+                url = f"{self.base_url}/videos"
+                params = {
+                    "part": "snippet",
+                    "id": video_id,
+                    "key": self.api_key,
+                }
                 async with session.get(url, params=params) as response:
                     response_json = await response.json()
                     if response_json.get("items") and response_json["items"][0]:
@@ -197,7 +196,7 @@ class YouTubeClient:
                         logger.info("Found the video by id: {video_id}", video_id=video_id)
                     else:
                         logger.warning("Unable to get video by id: {video_id}", video_id=video_id)
-            except Exception as error:
-                logger.error("Error during http connection try: {err}", err=error.__repr__())
+        except Exception as error:
+            logger.error("Unable to get and form video info: {err}", err=error.__repr__())
 
         return video

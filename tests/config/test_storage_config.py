@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from config.models import DropboxConfig, StorageConfig
-from storage.dropbox_storage import DropBox
+from talkushka_service.config.models import DropboxConfig, StorageConfig
+from talkushka_service.storage import DropBox
 
 
 def test_dropbox_config_default():

@@ -23,4 +23,4 @@ storage:
 grpc:
   host: "95.24.105.21"
   port: 50051
-  channel_idle_time: 5
+  channel_idle_time: 15

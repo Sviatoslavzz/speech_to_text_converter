@@ -3,9 +3,9 @@ from time import sleep
 
 import pytest
 
-from app.main_workers import run_transcriber_executor
-from executors.process_executor import ProcessExecutor
-from objects import TranscriptionTask
+from talkushka_service.app import run_transcriber_executor
+from talkushka_service.executors.process_executor import ProcessExecutor
+from talkushka_service.objects import TranscriptionTask
 
 
 def sync_function(a: int, b: str) -> int:

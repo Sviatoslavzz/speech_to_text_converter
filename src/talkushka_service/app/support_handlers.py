@@ -4,8 +4,8 @@ from collections.abc import Callable
 from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions
 from loguru import logger
 
-from app_worker import AppWorker
-from objects import DownloadTask, VideoOptions, YouTubeVideo
+from talkushka_service.app_worker import AppWorker
+from talkushka_service.objects import DownloadTask, VideoOptions, YouTubeVideo
 
 
 async def task_completion_loop(coroutines: list, callback: CallbackQuery):

@@ -5,11 +5,11 @@ from pathlib import Path
 
 from loguru import logger
 
-from storage.dropbox_storage import DropBox
+from talkushka_service.storage.dropbox_storage import DropBox
 
 
 def get_package_name() -> str:
-    pyproject_f = Path(__file__).parent.parent / "pyproject.toml"
+    pyproject_f = Path(__file__).parent.parent.parent / "pyproject.toml"  # TODO resolve path
     name = ""
     try:
         if not pyproject_f.is_file():
@@ -31,6 +31,9 @@ def get_version() -> str:
         version = im.version(package_name)
     except im.PackageNotFoundError:
         logger.error(f"Version not found for package {package_name}")
+    except Exception as e:
+        logger.error(f"Failed to get package version: {e.__repr__()}")
+
 
     return version
 

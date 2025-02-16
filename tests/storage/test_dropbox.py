@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from storage.dropbox_storage import DropBox
+from talkushka_service.storage import DropBox
 
 
 @pytest.fixture(scope="module")

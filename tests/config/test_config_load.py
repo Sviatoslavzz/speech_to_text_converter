@@ -3,10 +3,10 @@ from pathlib import Path
 import pytest
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 
-from config.base import YAMLConfig
-from config.models import BaseConfig
-from objects import MINUTE
-from storage.dropbox_storage import DropBox
+from talkushka_service.config.base import YAMLConfig
+from talkushka_service.config.models import BaseConfig
+from talkushka_service.objects import MINUTE
+from talkushka_service.storage import DropBox
 
 
 @pytest.fixture

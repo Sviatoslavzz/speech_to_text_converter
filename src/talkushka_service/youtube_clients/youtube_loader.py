@@ -10,7 +10,7 @@ import yt_dlp
 from loguru import logger
 from youtube_transcript_api import NoTranscriptFound, YouTubeTranscriptApi
 
-from objects import DownloadTask, VideoOptions
+from talkushka_service.objects import DownloadTask, VideoOptions
 
 
 class YouTubeLoader:
@@ -41,10 +41,10 @@ class YouTubeLoader:
         if proxy:
             self.__config["proxy"] = proxy
 
-        logger.info("{cls} : initialized : heavy_pool_size={heavy} : light_pool_size={light}",
-                    cls=self.__class__.__name__,
-                    heavy=heavy_pool_size,
-                    light=light_pool_size)
+        logger.debug("{cls} : initialized : heavy_pool_size={heavy} : light_pool_size={light}",
+                     cls=self.__class__.__name__,
+                     heavy=heavy_pool_size,
+                     light=light_pool_size)
 
     @classmethod
     def get_instance(cls):
@@ -106,7 +106,7 @@ class YouTubeLoader:
                             resolution_dict[cur_key] = f.get("vbr")
                         else:
                             resolution_dict[cur_key] = f.get("vbr")
-                logger.info("Successfully got options for video {link}", link=link)
+                logger.debug("Successfully got options for video {link}", link=link)
         except Exception as e:
             logger.error("Exception during extracting video info: {err}", err=e.__repr__())
 
@@ -114,7 +114,7 @@ class YouTubeLoader:
 
     @__async_wrap
     def download_audio(
-            self, task: DownloadTask, format_: str = "mp3", quality: str = "best", yt_dlp_config: dict | None = None
+            self, task: DownloadTask, format_: str = "m4a", quality: str = "best", yt_dlp_config: dict | None = None
     ) -> DownloadTask:
         """
         Downloads audio from the YouTube video.
@@ -144,8 +144,8 @@ class YouTubeLoader:
                 task.result = True
                 task.local_path = Path(f"{self.dir}/{title}.{ext}")
                 task.file_size = task.local_path.stat().st_size
-                logger.info("{task} Audio downloaded to {dir}/{title}.{ext}",
-                            task=task.id, dir=self.dir, title=title, ext=ext)
+                logger.debug("{task} Audio downloaded to {dir}/{title}.{ext}",
+                             task=task.id, dir=self.dir, title=title, ext=ext)
         except Exception as e:
             logger.error("{task} Exception during audio download for video id: {video} {err}",
                          task=task.id, video=task.video.id, err=e.__repr__())
@@ -166,10 +166,8 @@ class YouTubeLoader:
         title = f"{task.id}{self.prepare_title(task.video.title)}"
         config = yt_dlp_config if yt_dlp_config else copy.deepcopy(self.__config)
         config["outtmpl"] = f"{self.dir}/{title}.%(ext)s"
-        config[
-            "format"
-        ] = f"""bestvideo[height<={task.options.height}][width<={task.options.width}][ext={task.options.extension}]
-[fps<={task.options.fps}]+bestaudio[ext=m4a]/worst"""
+        config["format"] = (f"bestvideo[vcodec=avc1][height<={task.options.height}][width<={task.options.width}]"
+                            f"[ext={task.options.extension}][fps<={task.options.fps}]+bestaudio[ext=m4a]/worst")
 
         try:
             with yt_dlp.YoutubeDL(config) as ydl:
@@ -177,8 +175,8 @@ class YouTubeLoader:
                 task.local_path = Path(f"{self.dir}/{title}.{task.options.extension}")
                 task.file_size = task.local_path.stat().st_size
                 task.result = True
-                logger.info("{task} Video downloaded to {dir}/{title}.{ext}",
-                            task=task.id, dir=self.dir, title=title, ext=task.options.extension)
+                logger.debug("{task} Video downloaded to {dir}/{title}.{ext}",
+                             task=task.id, dir=self.dir, title=title, ext=task.options.extension)
         except Exception as e:
             logger.error("{task} Exception during video download for video id: {video}, {err}",
                          task=task.id, video=task.video.id, err=e.__repr__())
@@ -215,8 +213,8 @@ class YouTubeLoader:
             elif not transcript:
                 raise NoTranscriptFound
 
-            logger.info("{task} Successfully got a transcript for video: {video}",
-                        task=task.id, video=task.video.id)
+            logger.debug("{task} Successfully got a transcript for video: {video}",
+                         task=task.id, video=task.video.id)
 
         except Exception as e:
             logger.warning("{task} {err}", task=task.id, err=e.__repr__())
@@ -225,14 +223,19 @@ class YouTubeLoader:
             return task
 
         target_path: Path = (self.dir / title).with_suffix(".txt")
-        with target_path.open("w", encoding="utf-8") as file:
-            file.write(f"Название: {task.video.title}\n")
-            file.write(f"Автор: {task.video.owner_username}\n")
-            file.write(f"Дата публикации: {task.video.published_at}\n\n")
-            for entry in transcript:
-                file.write(entry["text"].replace("\n", "") + " ")
-        logger.info("{task} Transcript saved to: {path}", task=task.id, path=target_path)
-        task.local_path = target_path
-        task.file_size = task.local_path.stat().st_size
-        task.result = True
+        try:
+            with target_path.open("w", encoding="utf-8") as file:
+                file.write(f"Название: {task.video.title}\n")
+                file.write(f"Автор: {task.video.owner_username}\n")
+                file.write(f"Дата публикации: {task.video.published_at}\n\n")
+                for entry in transcript:
+                    file.write(entry["text"].replace("\n", "") + " ")
+            logger.debug("{task} Transcript saved to: {path}", task=task.id, path=target_path)
+            task.local_path = target_path
+            task.file_size = task.local_path.stat().st_size
+            task.result = True
+        except Exception as e:
+            task.result = False
+            logger.warning("{task} : Unable to write transcript to file : {err}", task=task.id, err=e.__repr__())
+
         return task

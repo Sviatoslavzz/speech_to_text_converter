@@ -3,7 +3,7 @@ from collections.abc import Callable
 
 from loguru import logger
 
-from executors.process_executor import ProcessExecutor
+from talkushka_service.executors.process_executor import ProcessExecutor
 
 
 class StorageExecutor(ProcessExecutor):

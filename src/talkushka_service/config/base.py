@@ -3,7 +3,7 @@ from typing import TypeVar
 
 import yaml
 
-from config.models import BaseConfig
+from talkushka_service.config.models import BaseConfig
 
 ConfigModelType = TypeVar("ConfigModelType", bound=BaseConfig)
 

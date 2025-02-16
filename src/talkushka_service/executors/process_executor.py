@@ -6,7 +6,7 @@ from typing import Any
 from loguru import logger
 from setproctitle import setproctitle
 
-from executors.abstract_executor import AbstractExecutor
+from talkushka_service.executors.abstract_executor import AbstractExecutor
 
 
 class ProcessExecutor(AbstractExecutor):

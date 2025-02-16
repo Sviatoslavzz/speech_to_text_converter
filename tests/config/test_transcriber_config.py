@@ -3,7 +3,7 @@ from pydantic import ValidationError
 from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 from transcribers.whisper_transcriber import WhisperTranscriber
 
-from config.models import TranscriberConfig
+from talkushka_service.config.models import TranscriberConfig
 
 
 def test_transcriber_config_default():

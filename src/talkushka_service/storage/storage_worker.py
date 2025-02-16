@@ -3,9 +3,9 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from config.models import DropboxConfig
-from objects import MINUTE, DownloadTask
-from storage.dropbox_storage import DropBox
+from talkushka_service.config.models import DropboxConfig
+from talkushka_service.objects import MINUTE, DownloadTask
+from talkushka_service.storage.dropbox_storage import DropBox
 
 
 @dataclass(slots=True)

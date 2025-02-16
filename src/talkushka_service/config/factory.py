@@ -1,4 +1,4 @@
-from storage.dropbox_storage import DropBox
+from talkushka_service.storage.dropbox_storage import DropBox
 
 
 def get_storage_cls(cls: str) -> type[DropBox]:
