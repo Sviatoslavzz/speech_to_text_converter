@@ -1,6 +1,5 @@
 import importlib.metadata as im
 import subprocess
-import tomllib
 from pathlib import Path
 
 from loguru import logger
@@ -9,19 +8,20 @@ from talkushka_service.storage.dropbox_storage import DropBox
 
 
 def get_package_name() -> str:
-    pyproject_f = Path(__file__).parent.parent.parent / "pyproject.toml"  # TODO resolve path
-    name = ""
-    try:
-        if not pyproject_f.is_file():
-            raise FileNotFoundError(f"{pyproject_f} does not exist.")
-
-        with pyproject_f.open(mode="rb") as f:
-            pyproject = tomllib.load(f)
-        name = pyproject["project"]["name"]
-    except Exception as e:
-        logger.error(f"Failed to get package name: {e}")
-
-    return name
+    # pyproject_f = Path(__file__).parent.parent.parent / "pyproject.toml"  # TODO resolve path
+    # name = ""
+    # try:
+    #     if not pyproject_f.is_file():
+    #         raise FileNotFoundError(f"{pyproject_f} does not exist.")
+    #
+    #     with pyproject_f.open(mode="rb") as f:
+    #         pyproject = tomllib.load(f)
+    #     name = pyproject["project"]["name"]
+    # except Exception as e:
+    #     logger.error(f"Failed to get package name: {e}")
+    #
+    # return name
+    return "talkushka_service"
 
 
 def get_version() -> str:

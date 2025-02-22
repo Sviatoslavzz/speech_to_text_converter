@@ -16,6 +16,32 @@ provide_channel = "Вставь ссылку на YouTube канал в след
 
 provide_file = "Прикрепи файл следующим сообщением"
 
-choose_video_button = "🎥 хочу поработать с отдельными видео"
-choose_channel_button = "🦄 хочу поработать с каналом"
-choose_file_button = "🗂️ хочу загрузить файл и получить транскрипцию"
+choose_video_button = {"ru": "🎥 хочу поработать с отдельными видео",
+                       "en": "🎥 handle a single video link"}
+
+choose_channel_button = {"ru": "🦄 хочу поработать с каналом",
+                         "en": "🦄 handle a channel link"}
+
+choose_file_button = {"ru": "🗂️ хочу загрузить файл и получить транскрипцию",
+                      "en": "🗂️ upload my file to get the transcription"}
+
+help_reply = {"ru": "Чтобы посмотреть инструкцию бота используй команду /start.\nИли выбери действие",
+              "en": "To check bot instruction use the /start command.\nOr choose an action"}
+
+change_language_reply = {"ru": "У тебя установлен язык '{lc}'",
+                         "en": "You current language setting if '{lc}'"}
+
+contact_helpdesk_reply = {"ru": "Напиши свое обращение следующим сообщением",
+                          "en": "Describe your request in a single message"}
+
+validate_helpdesk_message_reply = \
+    {"ru": "Твое обращение:\n\n{r}\n\nМы также передадим id твоего чата и твой nickname.",
+     "en": "Your request:\n\n{r}\n\nYour nickname and chat_id will be passed to helpdesk."}
+
+helpdesk_sent_reply = {"ru": "Спасибо! Твое обращение успешно отправлено в поддержку.",
+                       "en": "Thanks! Your request has been successfully sent to helpdesk."}
+
+cancel_reply = {"ru": "Галя, у нас отмена!",
+                "en": "Cancelled"}
+
+helpdesk_mess = "🚨 Helpdesk request:\nusername:{un}\nuser_id {uid}\n\n"

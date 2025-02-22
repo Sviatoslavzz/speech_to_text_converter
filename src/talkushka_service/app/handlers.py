@@ -6,29 +6,29 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions, Message
 from loguru import logger
 
+from talkushka_service.app import replies as rp
+from talkushka_service.app.filters import MainButtonFilter
 from talkushka_service.app.keyboards import (
     action_menu,
+    approve_menu,
     generate_option_keyboard,
+    help_menu,
     main_menu,
     option_chooser_menu,
     proceed_simple_menu,
     standard_video_options_menu,
 )
-from talkushka_service.app.replies import (
-    choose_channel_button,
-    choose_file_button,
-    choose_video_button,
-    provide_channel,
-    provide_file,
-    provide_links,
-    welcome_message,
+from talkushka_service.app.states import HelpRoute, UserRoute
+from talkushka_service.app.support_handlers import (
+    check_content_type,
+    check_privilege_and_load,
+    lc,
+    task_completion_loop,
 )
-from talkushka_service.app.support_handlers import check_content_type, check_privilege_and_load, task_completion_loop
 from talkushka_service.app_worker import AppWorker
 from talkushka_service.objects import (
     DownloadOptions,
     DownloadTask,
-    UserRoute,
     VideoOptions,
     YouTubeVideo,
 )
@@ -42,7 +42,7 @@ async def command_start_handler(message: Message):
     Receives messages with `/start` command
     """
     logger.info(f"{message.from_user.username}:{message.from_user.id}:/START")
-    await message.answer(welcome_message, reply_markup=main_menu)
+    await message.answer(rp.welcome_message, reply_markup=main_menu[lc(message)])
 
 
 @router.message(Command("help"))
@@ -51,34 +51,73 @@ async def command_help_handler(message: Message):
     Receives messages with `/help` command
     """
     logger.info(f"{message.from_user.username}:{message.from_user.id}:/HELP")
-    sent = await message.answer("За помощью лучше обращаться к chat GPT 🤷‍♂️")
-    await asyncio.sleep(5)
-    await message.delete()
-    await sent.delete()
+    await message.answer(rp.help_reply[lc(message)], reply_markup=help_menu[lc(message)])
 
 
-@router.message(F.text == choose_video_button)
+@router.callback_query(F.data == "change_language")
+async def change_language_handler(callback: CallbackQuery):
+    logger.info(f"{callback.from_user.username}:{callback.from_user.id}:callback:change_language")
+    await callback.message.answer(rp.change_language_reply[lc(callback)].format(lc=lc(callback)))
+    await callback.message.answer("This feature is in development")  # TODO tmp message
+
+
+@router.callback_query(F.data == "contact_helpdesk")
+async def contact_helpdesk_handler(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"{callback.from_user.username}:{callback.from_user.id}:callback:contact_helpdesk")
+    await callback.message.answer(rp.contact_helpdesk_reply[lc(callback)])
+    await state.set_state(HelpRoute.validation)
+
+
+@router.message(HelpRoute.validation)
+async def helpdesk_validation_handler(message: Message, state: FSMContext):
+    logger.info(f"{message.from_user.username}:{message.from_user.id}:router:helpdesk_validation")
+    await message.answer(rp.validate_helpdesk_message_reply[lc(message)].format(r=message.text),
+                         reply_markup=approve_menu[lc(message)])
+    await state.update_data(validation=message.text)
+    await state.set_state(HelpRoute.approve)
+
+
+@router.callback_query(F.data == "approve", HelpRoute.approve)
+async def approve_helpdesk_request_handler(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"{callback.from_user.username}:{callback.from_user.id}:callback:approve_helpdesk_request")
+    await callback.message.answer(rp.helpdesk_sent_reply[lc(callback)])
+    state_data = await state.get_data()
+    await callback.bot.send_message(384173538,
+                                    rp.helpdesk_mess.format(un=callback.from_user.username,
+                                                            uid=callback.from_user.id) + \
+                                    state_data.get("validation", ""))  # TODO hardcode
+    await state.clear()
+
+
+@router.callback_query(F.data == "cancel", HelpRoute.approve)
+async def cancel_helpdesk_request_handler(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"{callback.from_user.username}:{callback.from_user.id}:callback:cancel_helpdesk_request")
+    await callback.message.answer(rp.cancel_reply[lc(callback)])
+    await state.clear()
+
+
+@router.message(MainButtonFilter(rp.choose_video_button.values()))
 async def video_handler(message: Message, state: FSMContext):
     logger.info(f"{message.from_user.username}:{message.from_user.id}:router:video_handler")
     await state.update_data(option="video")
     await state.set_state(UserRoute.videos)
-    await message.answer(provide_links)
+    await message.answer(rp.provide_links)
 
 
-@router.message(F.text == choose_channel_button)
+@router.message(MainButtonFilter(rp.choose_channel_button.values()))
 async def channel_handler(message: Message, state: FSMContext):
     logger.info(f"{message.from_user.username}:{message.from_user.id}:router:channel_handler")
     await state.update_data(option="channel")
     await state.set_state(UserRoute.videos)
-    await message.answer(provide_channel)
+    await message.answer(rp.provide_channel)
 
 
-@router.message(F.text == choose_file_button)
+@router.message(MainButtonFilter(rp.choose_file_button.values()))
 async def file_handler(message: Message, state: FSMContext):
     logger.info(f"{message.from_user.username}:{message.from_user.id}:router:file_handler")
     await state.update_data(option="file")
     await state.set_state(UserRoute.file)
-    await message.answer(provide_file)
+    await message.answer(rp.provide_file)
 
 
 @router.message(UserRoute.videos)

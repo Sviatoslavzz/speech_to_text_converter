@@ -2,8 +2,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-from aiogram.fsm.state import State, StatesGroup
-
 MINUTE = 60
 HOUR = MINUTE * 60
 MB = 1024 * 1024
@@ -60,13 +58,3 @@ class DownloadTask:
     file_size: int | None = None
     storage_link: str | None = None
 
-
-class UserRoute(StatesGroup):
-    """user route states"""
-    option = State()  # str : video | channel | file
-    videos = State()  # [links] | channel link
-    file = State()
-    action = State()  # str : download_video | download_audio | download_text
-    load_options = State()  # [VideoOptions] | str(width:height:fps)
-    single_video_options = State()
-    multi_video_options = State()

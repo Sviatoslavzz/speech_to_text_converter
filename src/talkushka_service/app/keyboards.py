@@ -3,15 +3,56 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardBu
 from talkushka_service.app.replies import choose_channel_button, choose_file_button, choose_video_button
 from talkushka_service.objects import VideoOptions
 
-main_menu = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text=choose_video_button)],
-        [KeyboardButton(text=choose_channel_button)],
-        [KeyboardButton(text=choose_file_button)],
-    ],
-    resize_keyboard=True,
-    input_field_placeholder="Выберите действие...",
-)
+main_menu = {
+    "ru": ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=choose_video_button["ru"]), ],
+            [KeyboardButton(text=choose_channel_button["ru"])],
+            [KeyboardButton(text=choose_file_button["ru"])],
+        ],
+        resize_keyboard=True,
+        input_field_placeholder="Выберите действие...",
+    ),
+    "en": ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=choose_video_button["en"])],
+            [KeyboardButton(text=choose_channel_button["en"])],
+            [KeyboardButton(text=choose_file_button["en"])],
+        ],
+        resize_keyboard=True,
+        input_field_placeholder="Choose an action...",
+    )
+}
+
+help_menu = {
+    "ru": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="сменить язык", callback_data="change_language")],
+            [InlineKeyboardButton(text="обратиться в поддержку", callback_data="contact_helpdesk")],
+        ]
+    ),
+    "en": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="change language", callback_data="change_language")],
+            [InlineKeyboardButton(text="contact helpdesk", callback_data="contact_helpdesk")],
+        ]
+    ),
+}
+
+approve_menu = {
+    "ru": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="подтвердить", callback_data="approve")],
+            [InlineKeyboardButton(text="отменить", callback_data="cancel")],
+        ]
+    ),
+    "en": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="approve", callback_data="approve")],
+            [InlineKeyboardButton(text="cancel", callback_data="cancel")],
+        ]
+    ),
+}
 
 action_menu = InlineKeyboardMarkup(
     inline_keyboard=[

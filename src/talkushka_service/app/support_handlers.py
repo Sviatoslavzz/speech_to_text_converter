@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import Callable
 
-from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions
+from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions, Message
 from loguru import logger
 
 from talkushka_service.app_worker import AppWorker
@@ -41,7 +41,7 @@ async def check_privilege_and_load(callback: CallbackQuery,
         """launch all tasks at a time"""
         coroutines = AppWorker.get_instance().launch_coroutines(
             async_worker=worker,
-            id_=f"{callback.from_user.id}{callback.message.message_id}",
+            id_=f"{callback.from_user.id}:{callback.message.message_id}",
             videos=videos,
             options=options or VideoOptions(),
         )
@@ -50,7 +50,7 @@ async def check_privilege_and_load(callback: CallbackQuery,
         """one task per user at a time"""
         async for coroutine in AppWorker.get_instance().launch_one_coroutine(
                 async_worker=worker,
-                id_=f"{callback.from_user.id}{callback.message.message_id}",
+                id_=f"{callback.from_user.id}:{callback.message.message_id}",
                 videos=videos,
                 options=options or VideoOptions(),
         ):
@@ -73,3 +73,10 @@ def check_content_type(message):
                    user_id=message.from_user.id,
                    type=message.content_type)
     return None
+
+
+def lc(msg: CallbackQuery | Message):
+    """
+    Get the language code of the user chat.
+    """
+    return "ru" if msg.from_user.language_code == "ru" else "en"

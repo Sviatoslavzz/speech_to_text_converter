@@ -194,24 +194,15 @@ class YouTubeLoader:
         :return: filled DownloadTask
         """
         title = f"{task.id}{self.prepare_title(task.video.title)}"
-        transcript = None
 
         try:
             available_transcripts = YouTubeTranscriptApi.list_transcripts(video_id=task.video.id)
-            transcript_obj_any = None
-            for transcript_obj in available_transcripts:
-                transcript_obj_any = transcript_obj
-                if transcript_obj.language_code == task.options.language:
-                    transcript = transcript_obj.fetch()
-                    break
-            if (
-                    not transcript and transcript_obj_any and transcript_obj_any.is_translatable
-            ):  # TODO загружает [music]...
-                transcript = transcript_obj_any.translate("en").fetch()
-            elif not transcript and transcript_obj_any:
-                transcript = transcript_obj_any.fetch()
-            elif not transcript:
+            transcript = next(iter(available_transcripts), None)
+
+            if not transcript:
                 raise NoTranscriptFound
+
+            transcript = transcript.fetch()
 
             logger.debug("{task} Successfully got a transcript for video: {video}",
                          task=task.id, video=task.video.id)
@@ -225,9 +216,9 @@ class YouTubeLoader:
         target_path: Path = (self.dir / title).with_suffix(".txt")
         try:
             with target_path.open("w", encoding="utf-8") as file:
-                file.write(f"Название: {task.video.title}\n")
-                file.write(f"Автор: {task.video.owner_username}\n")
-                file.write(f"Дата публикации: {task.video.published_at}\n\n")
+                file.write(f"Название: {task.video.title}\n"
+                           f"Автор: {task.video.owner_username}\n"
+                           f"Дата публикации: {task.video.published_at}\n\n")
                 for entry in transcript:
                     file.write(entry["text"].replace("\n", "") + " ")
             logger.debug("{task} Transcript saved to: {path}", task=task.id, path=target_path)
@@ -236,6 +227,7 @@ class YouTubeLoader:
             task.result = True
         except Exception as e:
             task.result = False
+            task.message.message["ru"] = f"Не смог загрузить субтитры для видео {task.video.id}"
             logger.warning("{task} : Unable to write transcript to file : {err}", task=task.id, err=e.__repr__())
 
         return task
