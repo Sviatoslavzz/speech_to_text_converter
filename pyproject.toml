@@ -1,6 +1,6 @@
 [project]
 name = "talkushka_service"
-version = "2.2.1"
+version = "2.2.2"
 description = "telegram bot service that is capable of download audio/video/text by youtube video/channel link, part of talkushka ecosystem"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
@@ -20,7 +20,8 @@ dependencies = [
     "aiofiles",
     "grpclib",
     "betterproto[rust-codec]==2.0.0b7",
-    "pyyaml"
+    "pyyaml",
+    "sqlalchemy~=2.0.38"
 ]
 requires-python = ">=3.12"
 
