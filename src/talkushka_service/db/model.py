@@ -27,7 +27,8 @@ class User(Base):
     __tablename__ = "user"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    uuid: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    uuid: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, unique=True,
+                                       server_default=text("gen_random_uuid()"))
     user_id: Mapped[int]
     chat_id: Mapped[int]
     username: Mapped[str | None]
@@ -41,7 +42,8 @@ class Subscription(Base):
     __tablename__ = "subscription"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    uuid: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    uuid: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, unique=True,
+                                       server_default=text("gen_random_uuid()"))
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True),
                                                  server_default=text("TIMEZONE('utc', now())"))
     ends_at: Mapped[datetime | None]
@@ -53,7 +55,8 @@ class Payment(Base):
     __tablename__ = "payment"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    uuid: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    uuid: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, unique=True,
+                                       server_default=text("gen_random_uuid()"))
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True),
                                                  server_default=text("TIMEZONE('utc', now())"))
     amount: Mapped[float]

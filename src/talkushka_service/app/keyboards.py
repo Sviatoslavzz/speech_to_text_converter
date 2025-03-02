@@ -54,20 +54,39 @@ approve_menu = {
     ),
 }
 
-action_menu = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="🎥 скачать видео", callback_data="download_video")],
-        [InlineKeyboardButton(text="🎧 скачать аудио", callback_data="download_audio")],
-        [InlineKeyboardButton(text="💬 скачать субтитры", callback_data="download_text")],
-    ]
-)
+action_menu = {
+    "ru": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🎥 скачать видео", callback_data="download_video")],
+            [InlineKeyboardButton(text="🎧 скачать аудио", callback_data="download_audio")],
+            [InlineKeyboardButton(text="💬 скачать субтитры", callback_data="download_text")],
+        ]
+    ),
+    "en": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🎥 download video", callback_data="download_video")],
+            [InlineKeyboardButton(text="🎧 download audio", callback_data="download_audio")],
+            [InlineKeyboardButton(text="💬 download subtitles", callback_data="download_text")],
+        ]
+    )
+}
 
-option_chooser_menu = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="🥷🏼 Выбирать качество отдельно для каждого видео", callback_data="single_option")],
-        [InlineKeyboardButton(text="🗿 Выбрать качество для всех сразу", callback_data="multi_option")],
-    ]
-)
+option_chooser_menu = {
+    "ru": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🥷🏼 Выбирать качество отдельно для каждого видео",
+                                  callback_data="single_option")],
+            [InlineKeyboardButton(text="🗿 Выбрать качество для всех сразу", callback_data="multi_option")],
+        ]
+    ),
+    "en": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🥷🏼 Choose quality for a single video",
+                                  callback_data="single_option")],
+            [InlineKeyboardButton(text="🗿 Choose quality for all videos once", callback_data="multi_option")],
+        ]
+    )
+}
 
 standard_video_options_menu = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -94,12 +113,20 @@ standard_video_options_menu = InlineKeyboardMarkup(
     ]
 )
 
-proceed_simple_menu = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="🥷🏼 Да", callback_data="single_option")],
-        [InlineKeyboardButton(text="🗿 Нет", callback_data="cancel")],
-    ]
-)
+proceed_simple_menu = {
+    "ru": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🥷🏼 Да", callback_data="single_option")],
+            [InlineKeyboardButton(text="🗿 Нет", callback_data="cancel")],
+        ]
+    ),
+    "en": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🥷🏼 Yes", callback_data="single_option")],
+            [InlineKeyboardButton(text="🗿 No", callback_data="cancel")],
+        ]
+    )
+}
 
 
 def generate_option_keyboard(options: list[VideoOptions]) -> InlineKeyboardMarkup:
