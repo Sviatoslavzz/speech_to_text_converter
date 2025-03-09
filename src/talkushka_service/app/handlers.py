@@ -309,7 +309,7 @@ async def download_text_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.message()
 async def any_mes(message: Message):
-    logger.info("{username}:{.id}:message:{text}", username=message.from_user.username,
+    logger.info("{username}:{id}:message:{text}", username=message.from_user.username,
                 id=message.from_user.id, text=message.text)
     sent = await message.answer("🤔")
     await asyncio.sleep(5)
