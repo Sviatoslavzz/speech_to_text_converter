@@ -12,9 +12,9 @@ from grpclib.client import Channel
 from loguru import logger
 
 from talkushka_service.config.models import GrpcConfig
-from talkushka_service.objects import MB, MINUTE
+from talkushka_service.model.objects import MB, MINUTE
 from talkushka_service.proto_gen.whisper import AudioChunk, AudioTransferStub, HealthCheckRequest
-from talkushka_service.utils import get_project_root
+from talkushka_service.utils.functions import get_project_root
 
 
 class GrpcClient:

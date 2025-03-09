@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from talkushka_service.objects import DownloadTask, VideoOptions
+from talkushka_service.model.objects import DownloadTask, VideoOptions
 
 
 @pytest.mark.asyncio

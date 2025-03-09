@@ -26,7 +26,7 @@ from talkushka_service.app.support_handlers import (
     task_completion_loop,
 )
 from talkushka_service.app_worker import AppWorker
-from talkushka_service.objects import (
+from talkushka_service.model.objects import (
     DownloadOptions,
     DownloadTask,
     VideoOptions,
@@ -130,7 +130,8 @@ async def file_handler(message: Message, state: FSMContext):
 @router.message(UserRoute.videos)
 async def video_handler_links(message: Message, state: FSMContext):
     user_state = await state.get_data()
-    logger.info(f"{message.from_user.username}:{message.from_user.id}:video_handler_links:{user_state.get("option")}")
+    logger.info("{username}:{id}:video_handler_links:{option}", username=message.from_user.username,
+                id=message.from_user.id, option=user_state.get("option"))
 
     lc_ = lc(message)
     videos: list[YouTubeVideo] = []
@@ -234,7 +235,8 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(UserRoute.single_video_options)
 async def download_video_with_single_option(callback: CallbackQuery, state: FSMContext):
-    logger.info(f"{callback.from_user.username}:{callback.from_user.id} callback : single_video_options")
+    logger.info("{username}:{id}:callback:single_video_options", username=callback.from_user.username,
+                id=callback.from_user.id)
     lc_ = lc(callback)
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer(rp.in_progress[lc_])
@@ -262,7 +264,8 @@ async def download_video_with_single_option(callback: CallbackQuery, state: FSMC
 
 @router.callback_query(UserRoute.multi_video_options)
 async def download_video_with_multi_option(callback: CallbackQuery, state: FSMContext):
-    logger.info(f"{callback.from_user.username}:{callback.from_user.id}:callback:multi_video_options")
+    logger.info("{username}:{id}:callback:multi_video_options", username=callback.from_user.username,
+                id=callback.from_user.id)
     lc_ = lc(callback)
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer(rp.in_progress[lc_])
@@ -277,7 +280,8 @@ async def download_video_with_multi_option(callback: CallbackQuery, state: FSMCo
 
 @router.callback_query(F.data == "download_audio", UserRoute.action)
 async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
-    logger.info(f"{callback.from_user.username}:{callback.from_user.id} callback : download_audio")
+    logger.info("{username}:{id} callback : download_audio", username=callback.from_user.username,
+                id=callback.from_user.id)
     lc_ = lc(callback)
     user_state = await state.get_data()
     await state.clear()
@@ -290,7 +294,8 @@ async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "download_text", UserRoute.action)
 async def download_text_handler(callback: CallbackQuery, state: FSMContext):
-    logger.info(f"{callback.from_user.username}:{callback.from_user.id} callback : download_text")
+    logger.info("{username}:{id} callback : download_text", username=callback.from_user.username,
+                id=callback.from_user.id)
     lc_ = lc(callback)
     await state.update_data(action=DownloadOptions.TEXT)
     user_state = await state.get_data()
@@ -304,7 +309,8 @@ async def download_text_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.message()
 async def any_mes(message: Message):
-    logger.info(f"{message.from_user.username}:{message.from_user.id}:message:{message.text}")
+    logger.info("{username}:{.id}:message:{text}", username=message.from_user.username,
+                id=message.from_user.id, text=message.text)
     sent = await message.answer("🤔")
     await asyncio.sleep(5)
     await message.delete()

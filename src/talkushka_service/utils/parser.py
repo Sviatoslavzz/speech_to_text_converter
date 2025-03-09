@@ -5,7 +5,7 @@ from loguru import logger
 
 from talkushka_service.config.base import ConfigModelType, YAMLConfig
 from talkushka_service.config.models import BaseConfig
-from talkushka_service.utils import get_version
+from talkushka_service.utils.functions import get_version
 
 
 class ConfigModelFileType:

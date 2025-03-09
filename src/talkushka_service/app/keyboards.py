@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 
 from talkushka_service.app.replies import choose_channel_button, choose_file_button, choose_video_button
-from talkushka_service.objects import VideoOptions
+from talkushka_service.model.objects import VideoOptions
 
 main_menu = {
     "ru": ReplyKeyboardMarkup(

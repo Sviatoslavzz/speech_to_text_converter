@@ -11,7 +11,7 @@ import requests
 from dropbox.files import CommitInfo, UploadSessionCursor
 from loguru import logger
 
-from talkushka_service.objects import HOUR, MB, MINUTE
+from talkushka_service.model.objects import HOUR, MB, MINUTE
 
 
 class DropBox:

@@ -5,21 +5,23 @@ from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions, Messag
 from loguru import logger
 
 from talkushka_service.app_worker import AppWorker
-from talkushka_service.objects import DownloadTask, VideoOptions, YouTubeVideo
+from talkushka_service.model.objects import DownloadTask, VideoOptions, YouTubeVideo
 
 
-async def task_completion_loop(coroutines: list, callback: CallbackQuery):
+async def task_completion_loop(coroutines: list[asyncio.Task], callback: CallbackQuery):
     for complete_task in asyncio.as_completed(coroutines):
         result_task: DownloadTask = await complete_task
         await asyncio.sleep(0.5)
         if result_task.result:
             if result_task.storage_link:
                 await callback.message.answer(
-                    f"""💥 Видео: {result_task.video.title}
-Прикрепляю ссылку на внешнее хранилище, {result_task.message.message["ru"]}\n{result_task.storage_link}""",
+                    f"💥 Видео: {result_task.video.title}\n"
+                    f"Прикрепляю ссылку на внешнее хранилище, {result_task.message["ru"]}\n"
+                    f"{result_task.storage_link}",
                     link_preview_options=LinkPreviewOptions(is_disabled=True),
                 )
-                logger.info(f"{callback.message.from_user.id}:link to storage sent")
+                logger.info("{uname}:{id}:link to storage sent", uname=callback.message.from_user.username,
+                            id=callback.message.from_user.id)
             else:
                 await callback.message.answer_document(
                     FSInputFile(
@@ -27,10 +29,11 @@ async def task_completion_loop(coroutines: list, callback: CallbackQuery):
                         filename=f"{result_task.video.title}{result_task.local_path.suffix}",
                     )
                 )
-                logger.info(f"{callback.message.from_user.id}:file sent")
+                logger.info("{uname}:{id}:file sent", uname=callback.message.from_user.username,
+                            id=callback.message.from_user.id)
                 await AppWorker.get_instance().remove_file(result_task.local_path)
         else:
-            await callback.message.answer(result_task.message.message["ru"])
+            await callback.message.answer(result_task.message["ru"])
 
 
 async def check_privilege_and_load(callback: CallbackQuery,

@@ -29,12 +29,6 @@ class YouTubeVideo:
         return self.link
 
 
-@dataclass(slots=True)
-class AppMessage:
-    message: dict[str, str] = field(default_factory=dict)
-    available_languages: list[str] = field(default_factory=lambda: ["ru"])
-
-
 @dataclass(slots=True, frozen=True)
 class VideoOptions:
     extension: str = "mp4"
@@ -51,10 +45,9 @@ class VideoOptions:
 class DownloadTask:
     id: str
     video: YouTubeVideo
-    message: AppMessage = field(default_factory=AppMessage)
+    message: dict[str, str] = field(default_factory=dict)
     options: VideoOptions = field(default_factory=VideoOptions)
     local_path: Path | None = None
     result: bool | None = False
     file_size: int | None = None
     storage_link: str | None = None
-

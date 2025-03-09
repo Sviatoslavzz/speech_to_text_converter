@@ -3,7 +3,7 @@ import re
 from aiohttp import ClientSession
 from loguru import logger
 
-from talkushka_service.objects import YouTubeVideo
+from talkushka_service.model.objects import YouTubeVideo
 
 
 class YouTubeClient:

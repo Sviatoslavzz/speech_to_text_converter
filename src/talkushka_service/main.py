@@ -3,13 +3,13 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
-from loguru import logger
 
 from talkushka_service.app.handlers import router
 from talkushka_service.app_worker import AppWorker
 from talkushka_service.config.base import YAMLConfig
+from talkushka_service.config.logger_settings import logger
 from talkushka_service.config.models import BotConfig
-from talkushka_service.parser import get_parser
+from talkushka_service.utils.parser import get_parser
 
 
 async def start_bot(bot_conf: BotConfig):
@@ -37,9 +37,11 @@ async def _run() -> None:
     args = parser.parse_args()
     config: YAMLConfig = args.config
 
-    AppWorker(config.data)
+    worker = AppWorker(config.data)
 
     await start_bot(config.data.bot)
+
+    worker.stop_executors()
 
 
 def main():

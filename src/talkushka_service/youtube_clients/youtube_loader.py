@@ -10,7 +10,7 @@ import yt_dlp
 from loguru import logger
 from youtube_transcript_api import NoTranscriptFound, YouTubeTranscriptApi
 
-from talkushka_service.objects import DownloadTask, VideoOptions
+from talkushka_service.model.objects import DownloadTask, VideoOptions
 
 
 class YouTubeLoader:
@@ -149,8 +149,8 @@ class YouTubeLoader:
         except Exception as e:
             logger.error("{task} Exception during audio download for video id: {video} {err}",
                          task=task.id, video=task.video.id, err=e.__repr__())
-            task.message.message["ru"] = "Произошла ошибка при скачивании аудио файла"
-            task.message.message["en"] = "Error during audio download"
+            task.message["ru"] = "Произошла ошибка при скачивании аудио файла"
+            task.message["en"] = "Internal error during audio downloading process"
             task.result = False
 
         return task
@@ -180,8 +180,8 @@ class YouTubeLoader:
         except Exception as e:
             logger.error("{task} Exception during video download for video id: {video}, {err}",
                          task=task.id, video=task.video.id, err=e.__repr__())
-            task.message.message["ru"] = "Произошла ошибка при скачивании видео файла"
-            task.message.message["ru"] = "Error during video download"
+            task.message["ru"] = "Произошла ошибка при скачивании видео файла"
+            task.message["en"] = "Internal error during video downloading process"
             task.result = False
 
         return task
@@ -194,7 +194,7 @@ class YouTubeLoader:
         :return: filled DownloadTask
         """
         title = f"{task.id}{self.prepare_title(task.video.title)}"
-
+        lc = None
         try:
             available_transcripts = YouTubeTranscriptApi.list_transcripts(video_id=task.video.id)
             transcript = next(iter(available_transcripts), None)
@@ -202,6 +202,7 @@ class YouTubeLoader:
             if not transcript:
                 raise NoTranscriptFound
 
+            lc = transcript.language_code
             transcript = transcript.fetch()
 
             logger.debug("{task} Successfully got a transcript for video: {video}",
@@ -209,16 +210,17 @@ class YouTubeLoader:
 
         except Exception as e:
             logger.warning("{task} {err}", task=task.id, err=e.__repr__())
-            task.message.message["ru"] = f"Не нашел субтитры для видео {task.video.id}"
+            task.message["ru"] = f"Не нашел субтитры для видео {task.video.title}"
+            task.message["en"] = f"subtitles not found for video {task.video.title}"
             task.result = False
             return task
 
         target_path: Path = (self.dir / title).with_suffix(".txt")
         try:
             with target_path.open("w", encoding="utf-8") as file:
-                file.write(f"Название: {task.video.title}\n"
-                           f"Автор: {task.video.owner_username}\n"
-                           f"Дата публикации: {task.video.published_at}\n\n")
+                file.write(f"{'Название' if lc == 'ru' else 'Title'}: {task.video.title}\n"
+                           f"{'Автор' if lc == 'ru' else 'Author'}: {task.video.owner_username}\n"
+                           f"{'Дата публикации' if lc == 'ru' else 'Publishing date'}: {task.video.published_at}\n\n")
                 for entry in transcript:
                     file.write(entry["text"].replace("\n", "") + " ")
             logger.debug("{task} Transcript saved to: {path}", task=task.id, path=target_path)
@@ -226,8 +228,9 @@ class YouTubeLoader:
             task.file_size = task.local_path.stat().st_size
             task.result = True
         except Exception as e:
-            task.result = False
-            task.message.message["ru"] = f"Не смог загрузить субтитры для видео {task.video.id}"
             logger.warning("{task} : Unable to write transcript to file : {err}", task=task.id, err=e.__repr__())
+            task.result = False
+            task.message["ru"] = f"Не смог загрузить субтитры для видео {task.video.title}"
+            task.message["en"] = f"Unable to download subtitles for video {task.video.title}"
 
         return task

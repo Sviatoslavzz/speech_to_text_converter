@@ -6,8 +6,8 @@ from typing import TypeVar
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from talkushka_service.config.factory import get_storage_cls
-from talkushka_service.objects import MINUTE
-from talkushka_service.utils import create_saving_dir, validate_db_storages
+from talkushka_service.model.objects import MINUTE
+from talkushka_service.utils.functions import create_saving_dir, validate_db_storages
 
 storage_class = TypeVar("storage_class")  # Todo bound to abstract storage
 

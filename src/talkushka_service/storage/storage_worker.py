@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from loguru import logger
 
 from talkushka_service.config.models import DropboxConfig
-from talkushka_service.objects import MINUTE, DownloadTask
+from talkushka_service.model.objects import MINUTE, DownloadTask
 from talkushka_service.storage.dropbox_storage import DropBox
 
 
@@ -81,17 +81,23 @@ class StorageWorker:
                 return
 
         if task.file_size > self.storages[0].space:
-            task.message.message["ru"] = "К сожалению, нет места во внешнем хранилище"
+            task.message["ru"] = "К сожалению, нет места во внешнем хранилище"
+            task.message["en"] = "Unfortunately, there is no more space in external storage"
             task.result = False
         else:
             try:
                 task.storage_link = await self.storages[0].cls.upload(task.local_path)
-                task.message.message["ru"] = \
-                    f"ссылка действует {round(self.storages[0].cls.storage_time // MINUTE)} минут"
+                task.message.update(
+                    {"ru": f"ссылка действует {round(self.storages[0].cls.storage_time // MINUTE)} минут",
+                     "en": f"link is available for {round(self.storages[0].cls.storage_time // MINUTE)} minutes"}
+                )
                 task.local_path.unlink(missing_ok=True)
             except Exception as e:
                 logger.error("Exception while uploading file to storage {err}", err=e.__repr__())
-                task.message.message["ru"] = "Не получилось загрузить файл во внешнее хранилище."
+                task.message.update(
+                    {"ru": "Не получилось загрузить файл во внешнее хранилище.",
+                     "en": "Error while uploading file to external storage"}
+                )
                 task.result = False
 
         task.local_path.unlink(missing_ok=True)

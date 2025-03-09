@@ -5,7 +5,7 @@ from transcribers.faster_whisper_transcriber import FasterWhisperTranscriber
 
 from talkushka_service.config.base import YAMLConfig
 from talkushka_service.config.models import BaseConfig
-from talkushka_service.objects import MINUTE
+from talkushka_service.model.objects import MINUTE
 from talkushka_service.storage import DropBox
 
 

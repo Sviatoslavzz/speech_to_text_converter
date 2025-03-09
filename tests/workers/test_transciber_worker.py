@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from talkushka_service.objects import TranscriptionTask
+from talkushka_service.model.objects import TranscriptionTask
 
 
 @pytest.mark.skip(reason="Only manual testing, files required")

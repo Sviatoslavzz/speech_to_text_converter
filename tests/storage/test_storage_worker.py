@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from talkushka_service.objects import DownloadTask, VideoOptions, YouTubeVideo
+from talkushka_service.model.objects import DownloadTask, VideoOptions, YouTubeVideo
 from talkushka_service.storage import StorageWorker, storage_worker_as_target
 
 

@@ -11,9 +11,9 @@ from talkushka_service.config.models import BaseConfig
 from talkushka_service.executors.process_executor import ProcessExecutor
 from talkushka_service.executors.storage_executor import StorageExecutor
 from talkushka_service.grpc_service.client import GrpcClient
-from talkushka_service.objects import MB, DownloadTask, VideoOptions, YouTubeVideo
+from talkushka_service.model.objects import MB, DownloadTask, VideoOptions, YouTubeVideo
 from talkushka_service.storage.storage_worker import storage_worker_as_target
-from talkushka_service.utils import convert_to_m4a
+from talkushka_service.utils.functions import convert_to_m4a
 from talkushka_service.youtube_clients.youtube_api import YouTubeClient
 from talkushka_service.youtube_clients.youtube_loader import YouTubeLoader
 
@@ -41,6 +41,7 @@ class AppWorker:
         self.semaphore = asyncio.Semaphore(self.config.youtube.light_pool_size * 2)
         self.sem_queue_size = 0
         self.grpc_client = GrpcClient(self.config.grpc)
+        self.executors = []
 
         logger.debug("{cls} initialized", cls=self.__class__.__name__)
 
@@ -108,7 +109,10 @@ class AppWorker:
         if task.result and self.config.bot.server == "telegram" and task.file_size > 50 * MB:
             if not self.config.storage.storages:
                 task.result = False
-                task.message.message = {"ru": "К сожалению, невозможно передать файл больше 50 мб."}
+                task.message.update(
+                    {"ru": "К сожалению, невозможно передать файл больше 50 мб.",
+                     "en": "Unfortunately, there is limit for telegram file transfer = 50 MB "}
+                )
                 await self.remove_file(task.local_path)
                 logger.error("Failed attempt to transfer file > 50 MB directly to TG without storage.\n"
                              "Please set up at least 1 storage or use local server.")
@@ -225,13 +229,18 @@ class AppWorker:
         if not executor:
             executor = StorageExecutor(storage_worker_as_target, config=self.config.storage.storages)
             executor.configure(q_size=self.config.storage.q_size,
-                               # context="spawn" if IS_MACOS else "fork",
+                               context="spawn" if IS_MACOS else "fork",
                                process_name="python_storage_worker")
             executor.set_name("storage_worker")
             executor.start()
             await asyncio.sleep(5)  # delay for storage worker to start all storages
+            self.executors.append(executor)
 
         async_tasks = [asyncio.create_task(self.submit_task(executor, task)) for task in tasks]
         process_result = await asyncio.gather(*async_tasks)
 
         return list(process_result)
+
+    def stop_executors(self):
+        for executor in self.executors:
+            executor.stop()

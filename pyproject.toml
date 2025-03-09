@@ -37,7 +37,7 @@ test = [
 ]
 
 [project.scripts]
-run_bot = "talkushka_service.main:main"
+talkushka_service = "talkushka_service.main:main"
 
 [tool.ruff]
 line-length = 120

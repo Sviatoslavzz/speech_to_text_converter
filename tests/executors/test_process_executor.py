@@ -5,7 +5,7 @@ import pytest
 
 from talkushka_service.app import run_transcriber_executor
 from talkushka_service.executors.process_executor import ProcessExecutor
-from talkushka_service.objects import TranscriptionTask
+from talkushka_service.model.objects import TranscriptionTask
 
 
 def sync_function(a: int, b: str) -> int:
