@@ -1,6 +1,6 @@
 [project]
 name = "talkushka_service"
-version = "2.2.2"
+version = "2.2.3"
 description = "telegram bot service that is capable of download audio/video/text by youtube video/channel link, part of talkushka ecosystem"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
@@ -21,7 +21,10 @@ dependencies = [
     "grpclib",
     "betterproto[rust-codec]==2.0.0b7",
     "pyyaml",
-    "sqlalchemy~=2.0.38"
+    "sqlalchemy~=2.0.38",
+    "pydantic-settings~=2.8.1",
+    "asyncpg~=0.30.0",
+    "greenlet~=3.1.1",
 ]
 requires-python = ">=3.12"
 
@@ -68,6 +71,7 @@ ignore = [
     "ANN202", # Missing return type annotation for private function
     "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
     "ISC001",
+    "RUF006", # Store a reference to the return value of `asyncio.create_task`
 ]
 
 extend-select = [

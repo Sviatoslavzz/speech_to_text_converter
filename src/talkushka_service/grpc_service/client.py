@@ -82,7 +82,7 @@ class GrpcClient:
             if self.__connected:
                 self.__use_time = time()
             else:
-                asyncio.create_task(self.__client_timer_coro())  # noqa RUF006
+                asyncio.create_task(self.__client_timer_coro())
             return await func(self, *args, **kwargs)
 
         return wrapper
@@ -131,6 +131,6 @@ class GrpcClient:
     @property
     async def connected(self):
         if not self.__connected:
-            asyncio.create_task(self.__client_timer_coro())  # noqa RUF006
+            asyncio.create_task(self.__client_timer_coro())
             await asyncio.sleep(1)
         return self.__connected

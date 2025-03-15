@@ -51,6 +51,9 @@ help_reply = {"ru": "Чтобы посмотреть инструкцию бот
 change_language_reply = {"ru": "У тебя установлен язык '{lc}'",
                          "en": "You current language setting if '{lc}'"}
 
+language_changed = {"ru": "Вы успешно сменили язык бота на русский",
+                    "en": "Bot language has been successfully changed to English"}
+
 contact_helpdesk_reply = {"ru": "Напиши свое обращение следующим сообщением",
                           "en": "Describe your request in a single message"}
 
@@ -139,4 +142,29 @@ continue_msg = {
 videos_downloaded = {
     "ru": "Мы скачали все видео",
     "en": "All videos downloaded",
+}
+
+file_limit = {
+    "ru": "К сожалению, лимит бесплатных транскрибаций на сегодня исчерпан.",
+    "en": "Unfortunately, the limit of free transcribings is expired for today.",
+}
+
+video_limit = {
+    "ru": "К сожалению, лимит бесплатных загрузок видео на сегодня исчерпан.",
+    "en": "Unfortunately, the limit of free video downloads is expired for today.",
+}
+
+audio_limit = {
+    "ru": "К сожалению, лимит бесплатных загрузок аудио на сегодня исчерпан.",
+    "en": "Unfortunately, the limit of free audio downloads is expired for today.",
+}
+
+subtitle_limit = {
+    "ru": "К сожалению, лимит бесплатных загрузок субтитров на сегодня исчерпан.",
+    "en": "Unfortunately, the limit of free subtitle downloads is expired for today.",
+}
+
+external_storage_ms = {
+    "ru": "💥 Видео: {title}\nПрикрепляю ссылку на внешнее хранилище:\n{link}\n{message}",
+    "en": "💥 Video: {title}\nLink to external storage below:\n{link}\n{message}"
 }

@@ -9,6 +9,7 @@ from talkushka_service.app_worker import AppWorker
 from talkushka_service.config.base import YAMLConfig
 from talkushka_service.config.logger_settings import logger
 from talkushka_service.config.models import BotConfig
+from talkushka_service.db import migrate
 from talkushka_service.utils.parser import get_parser
 
 
@@ -33,6 +34,8 @@ async def start_bot(bot_conf: BotConfig):
 
 
 async def _run() -> None:
+    await migrate()
+
     parser = get_parser()
     args = parser.parse_args()
     config: YAMLConfig = args.config

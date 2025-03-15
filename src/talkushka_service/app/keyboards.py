@@ -140,3 +140,18 @@ def generate_option_keyboard(options: list[VideoOptions]) -> InlineKeyboardMarku
             for option in options
         ]
     )
+
+change_language_menu = {
+    "ru": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="сменить на русский", callback_data="lc_to_ru")],
+            [InlineKeyboardButton(text="сменить на английский", callback_data="lc_to_en")],
+        ]
+    ),
+    "en": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="change to russian", callback_data="lc_to_ru")],
+            [InlineKeyboardButton(text="change to english", callback_data="lc_to_en")],
+        ]
+    ),
+}
