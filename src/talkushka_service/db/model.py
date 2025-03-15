@@ -22,10 +22,10 @@ class Privilege(enum.Enum):
 
 
 class SubscriptionType(enum.Enum):
-    god = "god"
-    week = "week"
-    month = "month"
-    year = "year"
+    week = 1
+    month = 2
+    year = 3
+    lifetime = 4
 
 
 class User(Base):
@@ -55,7 +55,7 @@ class Subscription(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, unique=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True),
                                                  server_default=text("TIMEZONE('utc', now())"))
-    is_active: Mapped[bool] = mapped_column(server_default=text("false"))
+    is_active: Mapped[bool] = mapped_column(server_default=text("true"))
     type: Mapped[SubscriptionType]
     payment_uuid: Mapped[UUID | None] = mapped_column(UUID(as_uuid=True))
 
@@ -89,10 +89,10 @@ class Promocode(Base):
     __tablename__ = "promocode"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    code: Mapped[str]
+    code: Mapped[str] = mapped_column(unique=True)
     created_at: Mapped[datetime] = mapped_column(server_default=text("TIMEZONE('utc', now())"))
     total_use: Mapped[int]
-    actual_use: Mapped[int]
+    actual_use: Mapped[int] = mapped_column(default=0)
     type: Mapped[SubscriptionType]
 
 

@@ -8,6 +8,7 @@ from loguru import logger
 
 from talkushka_service.app import replies as rp
 from talkushka_service.app.db_operation import (
+    apply_promocode,
     change_user_lc,
     create_user,
     decrease_transcription_limit,
@@ -31,7 +32,7 @@ from talkushka_service.app.keyboards import (
     proceed_simple_menu,
     standard_video_options_menu,
 )
-from talkushka_service.app.states import HelpRoute, UserRoute
+from talkushka_service.app.states import HelpRoute, PromocodeRoute, UserRoute
 from talkushka_service.app.support_handlers import (
     check_content_type,
     check_privilege_and_load,
@@ -68,6 +69,23 @@ async def command_help_handler(message: Message):
     lc_ = await get_lc(message)
     await message.answer(rp.help_reply[lc_], reply_markup=help_menu[lc_])
 
+
+@router.message(Command("promocode"))
+async def command_promocode_handler(message: Message, state: FSMContext):
+    """
+    Receives messages with `/promocode` command
+    """
+    logger.info(f"{message.from_user.username}:{message.from_user.id}:/PROMOCODE")
+    lc_ = await get_lc(message)
+    await message.answer(rp.promocode[lc_])
+    await state.set_state(PromocodeRoute.receive)
+
+@router.message(PromocodeRoute.receive)
+async def promocode_validation_handler(message: Message, state: FSMContext):
+    logger.info(f"{message.from_user.username}:{message.from_user.id}:router:promocode_validation")
+    lc_ = await get_lc(message)
+    await apply_promocode(message, lc_)
+    await state.clear()
 
 @router.callback_query(F.data == "change_language")
 async def change_language_handler(callback: CallbackQuery):

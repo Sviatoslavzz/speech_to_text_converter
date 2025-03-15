@@ -14,3 +14,6 @@ class UserRoute(StatesGroup):
 class HelpRoute(StatesGroup):
     validation = State()
     approve = State()
+
+class PromocodeRoute(StatesGroup):
+    receive = State()

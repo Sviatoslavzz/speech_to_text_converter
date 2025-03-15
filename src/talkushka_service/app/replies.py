@@ -1,3 +1,5 @@
+from talkushka_service.db.model import SubscriptionType
+
 welcome_message = {"ru":
                        "Добро пожаловать в бота по скачиванию и транскрибации YouTube видео 👋\n"
                        "Что я умею? 🤔\n"
@@ -168,3 +170,49 @@ external_storage_ms = {
     "ru": "💥 Видео: {title}\nПрикрепляю ссылку на внешнее хранилище:\n{link}\n{message}",
     "en": "💥 Video: {title}\nLink to external storage below:\n{link}\n{message}"
 }
+
+promocode = {
+    "ru": "У тебя есть промокод? Отлично! Введи его следующим сообщением",
+    "en": "You have a promo code? Great! Please send it in the next message"
+}
+
+promocode_success = {
+    "ru": "Вы успешно применили промокод.\nАктивирована подписка: {subscription}",
+    "en": "Promo code is applied successfully.\nSubscription activated: {subscription}"
+}
+
+promocode_not_found = {
+    "ru": "Промокод не найден",
+    "en": "Promo code is not found"
+}
+
+promocode_worse_subscription = {
+    "ru": "Попробуйте применить другой промокод либо дождитесь окончания действия подписки",
+    "en": "Try to use another promocode or wait till the current subscription is expired"
+}
+
+def get_subscription_message(subscription_type: SubscriptionType, language_code: str) -> str:
+    week_msg = {
+        "ru": "одна неделя безлимитной загрузки",
+        "en": "a week of unlimited downloads",
+    }
+    month_msg = {
+        "ru": "один месяц безлимитной загрузки",
+        "en": "a month of unlimited downloads",
+    }
+    year_msg = {
+        "ru": "один год безлимитной загрузки",
+        "en": "a year of unlimited downloads",
+    }
+    lifetime_msg = {
+        "ru": "вечная безлимитная загрузка",
+        "en": "eternal unlimited downloads",
+    }
+    if subscription_type == SubscriptionType.week:
+        return week_msg[language_code]
+    if subscription_type == SubscriptionType.month:
+        return month_msg[language_code]
+    if subscription_type == SubscriptionType.year:
+        return year_msg[language_code]
+    return lifetime_msg[language_code]
+

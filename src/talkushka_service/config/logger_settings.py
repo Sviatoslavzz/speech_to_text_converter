@@ -2,7 +2,7 @@ from sys import stdout
 
 from loguru import logger
 
-from talkushka_service.config import settings
+from talkushka_service.config.settings import settings
 
 logger.remove(0)
 

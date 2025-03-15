@@ -118,8 +118,8 @@ class UserDAO(BaseDAO):
 
     @classmethod
     @with_session
-    async def update_by_kwargs(cls, session: AsyncSession, **kwargs) -> User:
-        query = select(cls._model).where(cls._model.user_id == kwargs["user_id"])
+    async def update_by_kwargs(cls, session: AsyncSession, user_id: int, **kwargs) -> User:
+        query = select(cls._model).where(cls._model.user_id == user_id)
         result = await session.scalars(query)
         instance = result.first()
         for key, value in kwargs.items():
@@ -146,6 +146,17 @@ class PaymentDAO(BaseDAO):
 
 class PromocodeDAO(BaseDAO):
     _model = Promocode
+
+    @classmethod
+    @with_session
+    async def update_by_kwargs(cls, session: AsyncSession, id: int, **kwargs) -> Promocode:
+        query = select(cls._model).where(cls._model.id == id)
+        result = await session.scalars(query)
+        instance = result.first()
+        for key, value in kwargs.items():
+            setattr(instance, key, value)
+        await session.flush()
+        return instance
 
 
 class UserLimitDAO(BaseDAO):

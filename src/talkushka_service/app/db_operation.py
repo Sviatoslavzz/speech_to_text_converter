@@ -1,7 +1,15 @@
+import asyncio
+
 from aiogram.types import CallbackQuery, Message
 from loguru import logger
 
-from talkushka_service.db.dao import UserDAO, UserLimitDAO
+from talkushka_service.app.replies import (
+    get_subscription_message,
+    promocode_not_found,
+    promocode_success,
+    promocode_worse_subscription,
+)
+from talkushka_service.db.dao import PromocodeDAO, SubscriptionDAO, UserDAO, UserLimitDAO
 from talkushka_service.db.model import Privilege
 
 
@@ -75,3 +83,34 @@ async def decrease_subtitle_limit(msg: CallbackQuery | Message):
     user = await UserDAO.get_one_or_none(user_id=msg.from_user.id)
     if user and user.privilege == Privilege.user:
         await UserLimitDAO.decrease_limit_by_user_id(user_id=msg.from_user.id, subtitle=1)
+
+
+async def apply_promocode(msg: Message | CallbackQuery, language_code: str):
+    user = await UserDAO.get_one_or_none(user_id=msg.from_user.id)
+    if not user:
+        logger.warning("No users found to apply promocode user_id={user_id}", user_id=msg.from_user.id)
+        return
+
+    if promocode := await PromocodeDAO.get_one_or_none(code=msg.text):
+        if user.subscription_id and \
+                (subscription := await SubscriptionDAO.get_one_or_none(id=user.subscription_id)):
+            logger.debug("found active subscription for user={user_id}", user_id=msg.from_user.id)
+            if subscription.type.value >= promocode.type.value:
+                logger.info("try to apply promocode with type worse than actual subscription user_id={user_id}",
+                            user_id=msg.from_user.id)
+                await msg.answer(promocode_worse_subscription[language_code])
+                return
+
+        if promocode.actual_use < promocode.total_use:
+            asyncio.create_task(PromocodeDAO.update_by_kwargs(id=promocode.id, actual_use=promocode.actual_use + 1))
+            new_subscription = await SubscriptionDAO.add_by_kwargs(type=promocode.type)
+            asyncio.create_task(UserDAO.update_by_kwargs(user_id=user.user_id, subscription_id=new_subscription.id))
+            logger.info("subscription {type} is applied for user_id={user_id} by promocode",
+                        type=promocode.type,
+                        user_id=msg.from_user.id)
+            await msg.answer(promocode_success[language_code].format(
+                subscription=get_subscription_message(new_subscription.type, language_code))
+            )
+            return
+
+    await msg.answer(promocode_not_found[language_code])
