@@ -4,17 +4,10 @@ from collections.abc import Callable
 from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions
 from loguru import logger
 
-from talkushka_service.app.db_operation import (
-    decrease_audio_limit,
-    decrease_subtitle_limit,
-    decrease_video_limit,
-    validate_audio_download_limit,
-    validate_subtitle_download_limit,
-    validate_video_download_limit,
-)
-from talkushka_service.app.replies import audio_limit, external_storage_ms, subtitle_limit, video_limit
+from talkushka_service.app.db_operation import decrease_limit, validate_limit
+from talkushka_service.app.replies import external_storage_ms, get_limit_reply
 from talkushka_service.app_worker import AppWorker
-from talkushka_service.model.objects import DownloadTask, VideoOptions, YouTubeVideo
+from talkushka_service.model.objects import AppOperation, DownloadTask, VideoOptions, YouTubeVideo
 
 
 async def task_completion_loop(coroutines: list[asyncio.Task], callback: CallbackQuery, language_code: str):
@@ -76,24 +69,18 @@ async def check_privilege_and_load(callback: CallbackQuery,
 
 
 async def decrease_and_validate_limits(callback: CallbackQuery, language_code: str, worker_name: str):
-    if worker_name == "download_video_worker":
-        await decrease_video_limit(callback)
-        if not await validate_video_download_limit(callback):
-            await callback.bot.send_message(chat_id=callback.from_user.id,
-                                            text=video_limit[language_code])
-            return False
-    elif worker_name == "download_audio_worker":
-        await decrease_audio_limit(callback)
-        if not await validate_audio_download_limit(callback):
-            await callback.bot.send_message(chat_id=callback.from_user.id,
-                                            text=audio_limit[language_code])
-            return False
+    parameter = AppOperation.VIDEO
+
+    if worker_name == "download_audio_worker":
+        parameter = AppOperation.AUDIO
     elif worker_name == "download_subtitles_worker":
-        await decrease_subtitle_limit(callback)
-        if not await validate_subtitle_download_limit(callback):
-            await callback.bot.send_message(chat_id=callback.from_user.id,
-                                            text=subtitle_limit[language_code])
-            return False
+        parameter = AppOperation.SUBTITLE
+
+    await decrease_limit(callback.from_user.id, parameter, 1)
+    if not await validate_limit(callback.from_user.id, parameter):
+        await callback.bot.send_message(chat_id=callback.from_user.id,
+                                        text=get_limit_reply(parameter, language_code))
+        return False
 
     return True
 

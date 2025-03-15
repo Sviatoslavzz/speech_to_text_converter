@@ -59,14 +59,14 @@ action_menu = {
         inline_keyboard=[
             [InlineKeyboardButton(text="🎥 скачать видео", callback_data="download_video")],
             [InlineKeyboardButton(text="🎧 скачать аудио", callback_data="download_audio")],
-            [InlineKeyboardButton(text="💬 скачать субтитры", callback_data="download_text")],
+            [InlineKeyboardButton(text="💬 скачать субтитры", callback_data="download_subtitle")],
         ]
     ),
     "en": InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="🎥 download video", callback_data="download_video")],
             [InlineKeyboardButton(text="🎧 download audio", callback_data="download_audio")],
-            [InlineKeyboardButton(text="💬 download subtitles", callback_data="download_text")],
+            [InlineKeyboardButton(text="💬 download subtitles", callback_data="download_subtitle")],
         ]
     )
 }

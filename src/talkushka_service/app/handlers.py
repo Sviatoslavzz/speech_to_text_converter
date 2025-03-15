@@ -11,14 +11,10 @@ from talkushka_service.app.db_operation import (
     apply_promocode,
     change_user_lc,
     create_user,
-    decrease_transcription_limit,
-    decrease_video_limit,
+    decrease_limit,
     get_helpdesk_chats,
     get_lc,
-    validate_audio_download_limit,
-    validate_file_transcription_limit,
-    validate_subtitle_download_limit,
-    validate_video_download_limit,
+    validate_limit,
 )
 from talkushka_service.app.filters import MainButtonFilter
 from talkushka_service.app.keyboards import (
@@ -40,7 +36,7 @@ from talkushka_service.app.support_handlers import (
 )
 from talkushka_service.app_worker import AppWorker
 from talkushka_service.model.objects import (
-    DownloadOptions,
+    AppOperation,
     DownloadTask,
     VideoOptions,
     YouTubeVideo,
@@ -165,7 +161,7 @@ async def file_handler(message: Message, state: FSMContext):
     logger.info(f"{message.from_user.username}:{message.from_user.id}:router:file_handler")
     lc_ = await get_lc(message)
 
-    if await validate_file_transcription_limit(message):
+    if await validate_limit(message.from_user.id, AppOperation.TRANSCRIPTION):
         await state.update_data(option="file")
         await state.set_state(UserRoute.file)
         await message.answer(rp.provide_file[lc_])
@@ -228,7 +224,7 @@ async def file_receiver(message: Message, state: FSMContext):
         await message.answer_document(FSInputFile(text_file_path))
         await AppWorker.get_instance().remove_file(text_file_path)
         logger.info("{user}:{id}:transcription sent", user=message.from_user.username, id=message.from_user.id)
-        await decrease_transcription_limit(message)
+        await decrease_limit(message.from_user.id, AppOperation.TRANSCRIPTION, 1)
     else:
         await message.answer(rp.transcriber_unavailable[lc_])
         logger.warning("{user}:{id}:failed to sent transcription", user=message.from_user.username,
@@ -264,7 +260,7 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
     user_state = await state.get_data()
     videos = user_state.get("videos", [])
 
-    if not await validate_video_download_limit(callback):
+    if not await validate_limit(callback.from_user.id, AppOperation.VIDEO):
         await callback.bot.send_message(chat_id=callback.from_user.id,
                                         text=rp.video_limit[lc_])
         await state.clear()
@@ -308,7 +304,7 @@ async def download_video_with_single_option(callback: CallbackQuery, state: FSMC
     )
 
     await task_completion_loop([async_task], callback, lc_)
-    await decrease_video_limit(callback)
+    await decrease_limit(callback.from_user.id, AppOperation.VIDEO, 1)
 
     if user_state.get("videos", None):
         await state.update_data(videos=user_state.get("videos"))
@@ -342,7 +338,7 @@ async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
                 id=callback.from_user.id)
     lc_ = await get_lc(callback)
 
-    if not await validate_audio_download_limit(callback):
+    if not await validate_limit(callback.from_user.id, AppOperation.AUDIO):
         await callback.bot.send_message(chat_id=callback.from_user.id,
                                         text=rp.audio_limit[lc_])
         await state.clear()
@@ -358,19 +354,18 @@ async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
                                    videos=user_state.get("videos", []))
 
 
-@router.callback_query(F.data == "download_text", UserRoute.action)
-async def download_text_handler(callback: CallbackQuery, state: FSMContext):
-    logger.info("{username}:{id} callback : download_text", username=callback.from_user.username,
+@router.callback_query(F.data == "download_subtitle", UserRoute.action)
+async def download_subtitle_handler(callback: CallbackQuery, state: FSMContext):
+    logger.info("{username}:{id} callback : download_subtitle", username=callback.from_user.username,
                 id=callback.from_user.id)
     lc_ = await get_lc(callback)
 
-    if not await validate_subtitle_download_limit(callback):
+    if not await validate_limit(callback.from_user.id, AppOperation.SUBTITLE):
         await callback.bot.send_message(chat_id=callback.from_user.id,
                                         text=rp.subtitle_limit[lc_])
         await state.clear()
         return
 
-    await state.update_data(action=DownloadOptions.TEXT)
     user_state = await state.get_data()
     await state.clear()
     await callback.answer("🚀", show_alert=False)

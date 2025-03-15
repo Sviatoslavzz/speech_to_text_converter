@@ -1,4 +1,5 @@
 from talkushka_service.db.model import SubscriptionType
+from talkushka_service.model.objects import AppOperation
 
 welcome_message = {"ru":
                        "Добро пожаловать в бота по скачиванию и транскрибации YouTube видео 👋\n"
@@ -166,6 +167,17 @@ subtitle_limit = {
     "en": "Unfortunately, the limit of free subtitle downloads is expired for today.",
 }
 
+
+def get_limit_reply(parameter: AppOperation, language_code: str) -> str:
+    if parameter == AppOperation.TRANSCRIPTION:
+        return file_limit[language_code]
+    if parameter == AppOperation.AUDIO:
+        return audio_limit[language_code]
+    if parameter == AppOperation.VIDEO:
+        return video_limit[language_code]
+    return subtitle_limit[language_code]
+
+
 external_storage_ms = {
     "ru": "💥 Видео: {title}\nПрикрепляю ссылку на внешнее хранилище:\n{link}\n{message}",
     "en": "💥 Video: {title}\nLink to external storage below:\n{link}\n{message}"
@@ -191,6 +203,7 @@ promocode_worse_subscription = {
     "en": "Try to use another promocode or wait till the current subscription is expired"
 }
 
+
 def get_subscription_message(subscription_type: SubscriptionType, language_code: str) -> str:
     week_msg = {
         "ru": "одна неделя безлимитной загрузки",
@@ -215,4 +228,3 @@ def get_subscription_message(subscription_type: SubscriptionType, language_code:
     if subscription_type == SubscriptionType.year:
         return year_msg[language_code]
     return lifetime_msg[language_code]
-

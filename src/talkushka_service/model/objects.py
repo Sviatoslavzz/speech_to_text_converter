@@ -7,12 +7,11 @@ HOUR = MINUTE * 60
 MB = 1024 * 1024
 
 
-class DownloadOptions(Enum):
-    TEXT = 1
-    AUDIO = 2
-    VIDEO = 3
-    EXIT = 4
-
+class AppOperation(Enum):
+    TRANSCRIPTION = "transcription"
+    AUDIO = "audio"
+    VIDEO = "video"
+    SUBTITLE = "subtitle"
 
 @dataclass(slots=True)
 class YouTubeVideo:

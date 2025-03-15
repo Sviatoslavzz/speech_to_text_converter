@@ -11,6 +11,7 @@ from talkushka_service.app.replies import (
 )
 from talkushka_service.db.dao import PromocodeDAO, SubscriptionDAO, UserDAO, UserLimitDAO
 from talkushka_service.db.model import Privilege
+from talkushka_service.model.objects import AppOperation
 
 
 async def create_user(message: Message | CallbackQuery):
@@ -41,48 +42,22 @@ async def get_helpdesk_chats() -> list[int]:
     return [user.chat_id for user in users]
 
 
-async def validate_file_transcription_limit(msg: Message | CallbackQuery):
-    user = await UserLimitDAO.get_one_or_none(user_id=msg.from_user.id)
-    return bool(user and user.transcription > 0)
+async def validate_limit(user_id: int, parameter: AppOperation) -> bool:
+    """
+    Validate the limit for specific app operation represented by parameter.
+    """
+    user = await UserLimitDAO.get_one_or_none(user_id=user_id)
+    return bool(user and getattr(user, parameter.value, 0) > 0)
 
 
-async def validate_video_download_limit(msg: Message | CallbackQuery):
-    user = await UserLimitDAO.get_one_or_none(user_id=msg.from_user.id)
-    return bool(user and user.video > 0)
-
-
-async def validate_audio_download_limit(msg: Message | CallbackQuery):
-    user = await UserLimitDAO.get_one_or_none(user_id=msg.from_user.id)
-    return bool(user and user.audio > 0)
-
-
-async def validate_subtitle_download_limit(msg: Message | CallbackQuery):
-    user = await UserLimitDAO.get_one_or_none(user_id=msg.from_user.id)
-    return bool(user and user.subtitle > 0)
-
-
-async def decrease_transcription_limit(msg: CallbackQuery | Message):
-    user = await UserDAO.get_one_or_none(user_id=msg.from_user.id)
-    if user and user.privilege == Privilege.user:
-        await UserLimitDAO.decrease_limit_by_user_id(user_id=msg.from_user.id, transcription=1)
-
-
-async def decrease_video_limit(msg: CallbackQuery | Message):
-    user = await UserDAO.get_one_or_none(user_id=msg.from_user.id)
-    if user and user.privilege == Privilege.user:
-        await UserLimitDAO.decrease_limit_by_user_id(user_id=msg.from_user.id, video=1)
-
-
-async def decrease_audio_limit(msg: CallbackQuery | Message):
-    user = await UserDAO.get_one_or_none(user_id=msg.from_user.id)
-    if user and user.privilege == Privilege.user:
-        await UserLimitDAO.decrease_limit_by_user_id(user_id=msg.from_user.id, audio=1)
-
-
-async def decrease_subtitle_limit(msg: CallbackQuery | Message):
-    user = await UserDAO.get_one_or_none(user_id=msg.from_user.id)
-    if user and user.privilege == Privilege.user:
-        await UserLimitDAO.decrease_limit_by_user_id(user_id=msg.from_user.id, subtitle=1)
+async def decrease_limit(user_id: int, parameter: AppOperation, value: int):
+    """
+    Decreases limit for chosen parameter by value.
+    Checks for user privilege and subscription.
+    """
+    user = await UserDAO.get_one_or_none(user_id=user_id)
+    if user and user.privilege == Privilege.user and not user.subscription_id:
+        await UserLimitDAO.decrease_limit_by_user_id(user_id=user_id, **{parameter.value: value})
 
 
 async def apply_promocode(msg: Message | CallbackQuery, language_code: str):
