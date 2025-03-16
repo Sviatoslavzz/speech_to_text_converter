@@ -9,6 +9,7 @@ from talkushka_service.app.replies import (
     promocode_success,
     promocode_worse_subscription,
 )
+from talkushka_service.config.settings import settings
 from talkushka_service.db.dao import PromocodeDAO, SubscriptionDAO, UserDAO, UserLimitDAO
 from talkushka_service.db.model import Privilege
 from talkushka_service.model.objects import AppOperation
@@ -89,3 +90,21 @@ async def apply_promocode(msg: Message | CallbackQuery, language_code: str):
             return
 
     await msg.answer(promocode_not_found[language_code])
+
+
+async def update_user_limits():
+    await UserLimitDAO.reset_limits(
+        video=settings.VIDEO_LIMIT,
+        audio=settings.AUDIO_LIMIT,
+        subtitle=settings.SUBTITLE_LIMIT,
+        transcription=settings.TRANSCRIPTION_LIMIT
+    )
+
+
+async def check_subscription() -> list[int]:
+    """
+    Checks user subscription.
+    :return: list of user ids with deactivated subscriptions.
+    """
+
+    return await UserDAO.remove_subscriptions(subscription_ids=await SubscriptionDAO.deactivate_expired())

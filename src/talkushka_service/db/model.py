@@ -108,6 +108,6 @@ class UserLimit(Base):
     video: Mapped[int] = mapped_column(default=10)
     audio: Mapped[int] = mapped_column(default=30)
     subtitle: Mapped[int] = mapped_column(default=100)
-    transcription: Mapped[int] = mapped_column(default=3)
+    transcription: Mapped[int] = mapped_column(default=1)
 
     user = relationship("User", back_populates="user_limit")

@@ -2,8 +2,10 @@ import importlib.metadata as im
 import subprocess
 from pathlib import Path
 
+from dateutil.relativedelta import relativedelta
 from loguru import logger
 
+from talkushka_service.db.model import SubscriptionType
 from talkushka_service.storage.dropbox_storage import DropBox
 
 
@@ -33,7 +35,6 @@ def get_version() -> str:
         logger.error(f"Version not found for package {package_name}")
     except Exception as e:
         logger.error(f"Failed to get package version: {e.__repr__()}")
-
 
     return version
 
@@ -84,3 +85,17 @@ def convert_to_m4a(path_: Path) -> tuple[bool, Path]:
         logger.error("Failed to convert to m4a: {err}", err=e.__repr__())
 
     return result, new_path
+
+
+def relative_delta_by_s_type(s_type: SubscriptionType) -> relativedelta:
+    """
+    :return: relativedelta for provided SubscriptionType
+    """
+    if s_type == SubscriptionType.week:
+        return relativedelta(days=7)
+    if s_type == SubscriptionType.month:
+        return relativedelta(month=1)
+    if s_type == SubscriptionType.year:
+        return relativedelta(year=1)
+    logger.error(f"error getting relativedelta : Unsupported SubscriptionType: {s_type}")
+    raise AssertionError("Unsupported SubscriptionType")

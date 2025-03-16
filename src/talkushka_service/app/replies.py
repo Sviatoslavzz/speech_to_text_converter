@@ -203,6 +203,10 @@ promocode_worse_subscription = {
     "en": "Try to use another promocode or wait till the current subscription is expired"
 }
 
+subscription_expired = {
+    "ru": "Ваша подписка истекла.\nЧтобы оформить новую подписку воспользуйся командой\n/GET_SUBSCRIPTION",
+    "en": "Your current subscription is expired.\nTo get a new one please use the command\n/GET_SUBSCRIPTION"
+}
 
 def get_subscription_message(subscription_type: SubscriptionType, language_code: str) -> str:
     week_msg = {

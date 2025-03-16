@@ -1,14 +1,16 @@
 from collections.abc import Callable
+from datetime import UTC, datetime
 from functools import wraps
 from typing import Any
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, DeclarativeMeta
 
 from talkushka_service.config.settings import DSN
-from talkushka_service.db.model import Payment, Privilege, Promocode, Subscription, User, UserLimit
+from talkushka_service.db.model import Payment, Privilege, Promocode, Subscription, SubscriptionType, User, UserLimit
+from talkushka_service.utils.functions import relative_delta_by_s_type
 
 async_session_factory = async_sessionmaker(create_async_engine(DSN), class_=AsyncSession, expire_on_commit=False)
 
@@ -135,9 +137,45 @@ class UserDAO(BaseDAO):
         result = await session.scalars(query)
         return result.all()
 
+    @classmethod
+    @with_session
+    async def remove_subscriptions(cls, session: AsyncSession, subscription_ids: list[int]) -> list[tuple[int, str]]:
+        """
+        Removes subscriptions from user.
+        :return: list of (chat_id, language_code) for which subscriptions are removed.
+        """
+        query = select(cls._model).where(cls._model.subscription_id.in_(subscription_ids))
+        result = await session.scalars(query)
+        user_ids = []
+        for user in result.all():
+            user.subscription_id = None
+            user_ids.append((user.chat_id, user.lc))
+        await session.flush()
+
+        return user_ids
+
 
 class SubscriptionDAO(BaseDAO):
     _model = Subscription
+
+    @classmethod
+    @with_session
+    async def deactivate_expired(cls, session: AsyncSession):
+        """
+        Deactivates expired subscriptions.
+        :return: list of deactivated subscription ids.
+        """
+        query = select(cls._model).filter(cls._model.is_active).filter(cls._model.type != SubscriptionType.lifetime)
+        result = await session.scalars(query)
+
+        deactivated_ids = []
+        for subscription in result.all():
+            if subscription.created_at < datetime.now(UTC) - relative_delta_by_s_type(subscription.type):
+                subscription.is_active = False
+                deactivated_ids.append(subscription.id)
+        await session.flush()
+
+        return deactivated_ids
 
 
 class PaymentDAO(BaseDAO):
@@ -179,3 +217,14 @@ class UserLimitDAO(BaseDAO):
             setattr(instance, key, curr_value - value)
         await session.flush()
         return instance
+
+    @classmethod
+    @with_session
+    async def reset_limits(cls, session: AsyncSession, video: int, audio: int, subtitle: int, transcription: int):
+        update_stmt = update(cls._model).values(
+            video=video,
+            audio=audio,
+            subtitle=subtitle,
+            transcription=transcription
+        )
+        await session.execute(update_stmt)

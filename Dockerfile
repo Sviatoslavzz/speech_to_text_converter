@@ -1,14 +1,13 @@
 FROM python:3.12
 
-WORKDIR /app
+WORKDIR /talkushka-service
 
-COPY . /app
+COPY . /talkushka-service
 
 RUN apt-get update && \
     apt-get install -y ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -e . -U
+RUN pip install --upgrade pip && pip install --no-cache-dir . -U
 
-CMD ["python3", "src/bot.py"]
+ENTRYPOINT ["talkushka_service"]

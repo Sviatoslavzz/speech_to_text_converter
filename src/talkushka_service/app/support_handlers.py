@@ -46,7 +46,7 @@ async def check_privilege_and_load(callback: CallbackQuery,
     """
     Privilege means user can download asynchronously all tasks.
     """
-    if callback.from_user.id in [123]:  # allowed user list
+    if callback.from_user.id in [3841735380,]:  # allowed user list
         """launch all tasks at a time"""
         coroutines = AppWorker.get_instance().launch_coroutines(
             async_worker=worker,

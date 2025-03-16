@@ -23,6 +23,8 @@ async def start_bot(bot_conf: BotConfig):
     dp = Dispatcher()
     dp.include_router(router)
 
+    await AppWorker.get_instance().start_check_subscription_coro(bot)
+
     try:
         logger.info("Starting bot polling...")
         await dp.start_polling(bot)

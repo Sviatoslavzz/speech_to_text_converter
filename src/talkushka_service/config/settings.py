@@ -12,6 +12,13 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "DEBUG"
 
+    UPDATE_LIMIT_HOUR_UTC: int = 19
+
+    VIDEO_LIMIT: int = 10
+    AUDIO_LIMIT: int = 30
+    SUBTITLE_LIMIT: int = 100
+    TRANSCRIPTION_LIMIT: int = 0
+
 
 settings = Settings()
 

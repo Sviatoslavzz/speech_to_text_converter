@@ -2,16 +2,21 @@ import asyncio
 import platform
 import re
 from collections.abc import AsyncGenerator, Callable
+from datetime import UTC, datetime
 from pathlib import Path
 
 import aiofiles.os
+from aiogram import Bot
 from loguru import logger
 
+from talkushka_service.app.db_operation import check_subscription, update_user_limits
+from talkushka_service.app.replies import subscription_expired
 from talkushka_service.config.models import BaseConfig
+from talkushka_service.config.settings import settings
 from talkushka_service.executors.process_executor import ProcessExecutor
 from talkushka_service.executors.storage_executor import StorageExecutor
 from talkushka_service.grpc_service.client import GrpcClient
-from talkushka_service.model.objects import MB, DownloadTask, VideoOptions, YouTubeVideo
+from talkushka_service.model.objects import HOUR, MB, DownloadTask, VideoOptions, YouTubeVideo
 from talkushka_service.storage.storage_worker import storage_worker_as_target
 from talkushka_service.utils.functions import convert_to_m4a
 from talkushka_service.youtube_clients.youtube_api import YouTubeClient
@@ -43,11 +48,35 @@ class AppWorker:
         self.grpc_client = GrpcClient(self.config.grpc)
         self.executors = []
 
+        self._update_limits_task = asyncio.create_task(self.__update_limits_coro())
+        self._check_subscription_task = None
+
         logger.debug("{cls} initialized", cls=self.__class__.__name__)
 
     @classmethod
     def get_instance(cls):
         return cls._instance
+
+    @staticmethod
+    async def __update_limits_coro() -> None:
+        while True:
+            if datetime.now(tz=UTC).time().hour == settings.UPDATE_LIMIT_HOUR_UTC:
+                logger.info("updating user limits")
+                await update_user_limits()
+
+            await asyncio.sleep(HOUR)
+
+    async def start_check_subscription_coro(self, bot: Bot):
+        self._check_subscription_task = asyncio.create_task(self.__check_subscription_coro(bot))
+
+    @staticmethod
+    async def __check_subscription_coro(bot: Bot) -> None:
+        while True:
+            logger.info("__check_subscription_coro running")
+            chat_ids = await check_subscription()
+            for chat_id, lc in chat_ids:
+                await bot.send_message(chat_id=chat_id, text=subscription_expired[lc])
+            await asyncio.sleep(HOUR)
 
     @staticmethod
     async def remove_file(file: Path) -> None:
@@ -244,3 +273,8 @@ class AppWorker:
     def stop_executors(self):
         for executor in self.executors:
             executor.stop()
+
+        if self._update_limits_task and not self._update_limits_task.done():
+            self._update_limits_task.cancel()
+        if self._check_subscription_task and not self._check_subscription_task.done():
+            self._check_subscription_task.cancel()
