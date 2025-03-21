@@ -10,7 +10,7 @@ from aiogram import Bot
 from loguru import logger
 
 from talkushka_service.app.db_operation import check_subscription, update_user_limits
-from talkushka_service.app.replies import subscription_expired
+from talkushka_service.app.replies import limits_info_message, subscription_expired
 from talkushka_service.config.models import BaseConfig
 from talkushka_service.config.settings import settings
 from talkushka_service.executors.process_executor import ProcessExecutor
@@ -76,6 +76,7 @@ class AppWorker:
             chat_ids = await check_subscription()
             for chat_id, lc in chat_ids:
                 await bot.send_message(chat_id=chat_id, text=subscription_expired[lc])
+                await bot.send_message(chat_id=chat_id, text=limits_info_message[lc])
             await asyncio.sleep(HOUR)
 
     @staticmethod

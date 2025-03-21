@@ -2,27 +2,37 @@ from talkushka_service.db.model import SubscriptionType
 from talkushka_service.model.objects import AppOperation
 
 welcome_message = {"ru":
-                       "Добро пожаловать в бота по скачиванию и транскрибации YouTube видео 👋\n"
-                       "Что я умею? 🤔\n"
-                       "🔹 Скачаю видео по YouTube ссылке\n"
-                       "🔹 Скачаю аудио по YouTube ссылке\n"
-                       "🔹 Скачаю субтитры, а если их нет у видео - "
-                       "запущу транскрибацию и все равно пришлю субтитры 🥰\n"
-                       "🔹 Могу сделать все вышеперечисленное сразу для всех видео с YouTube канала - "
-                       "для этого нужна ссылка на канал.\n"
-                       "🔹 И на десерт - могу сделать транскрипцию по твоему аудио/видео файлу 🥹\n\n"
-                       "Enjoy 😎",
+                       "Привет! Я Толкушка 👋\n"
+                       "Что я умею? 🤔\n\n"
+                       "1️⃣Действия с YouTube видео:\n"
+                       "🔹 Скачаю видео в нужном качестве\n"
+                       "🔹 Скачаю аудио\n"
+                       "🔹 Скачаю субтитры к видео\n"
+                       "🔹 Могу сделать все вышеперечисленное сразу для всех видео с канала - "
+                       "для этого нужна ссылка на канал.\n\n"
+                       "2️⃣Генерация текста:\n"
+                       "🔹 Могу сгенерировать текст по твоему аудио или видео файлу 🥹\n\n"
+                       "Наслаждайся 😎",
                    "en":
                        "Welcome to Talkushka chat-bot 👋\n"
-                       "What am I capable of? 🤔\n"
-                       "🔹 I can download a video by YouTube link\n"
-                       "🔹 I can download a audio by YouTube link\n"
-                       "🔹 I can download a subtitles by YouTube link, and in case of missing - "
-                       "may run transcriber and still send subtitles 🥰\n"
-                       "🔹 I can perform all the above for a whole YouTube channel.\n"
-                       "🔹 And for dessert - I can make a transcription from your audio/video file 🥹\n\n"
+                       "What am I capable of? 🤔\n\n"
+                       "🔹 I can download a video by YouTube link with required quality\n"
+                       "🔹 I can download an audio by YouTube link\n"
+                       "🔹 I can download subtitles by YouTube link\n"
+                       "🔹 I can perform all the above for all YouTube channel videos.\n"
+                       "🔹 I can make a transcription for your audio or video file 🥹\n\n"
                        "Enjoy 😎"
                    }
+
+limits_info_message = {"ru": "Сейчас я нахожусь в режиме бета тестирования.\n"
+                             "Каждый день ты бесплатно можешь скачать {video_limit} видео, {audio_limit} аудио, "
+                             "{subtitle_limit} субтитров и сделать {transcription_limit} транскрипций.\n"
+                             "Лимиты обновляются в {reset_hour}:00 по Мск.",
+                       "en": "Now is beta testing time.\n"
+                             "Every day you can download {video_limit} videos, {audio_limit} audios, "
+                             "{subtitle_limit} subtitles and request {transcription_limit} transcriptions.\n"
+                             "Limits are reset on {reset_hour}:00 Moscow tz."
+                       }
 
 provide_links = {
     "ru": "Вставь ссылку / ссылки в следующем сообщении (не забудь разделить их пробелом или переносом строки)",
@@ -183,6 +193,36 @@ external_storage_ms = {
     "en": "💥 Video: {title}\nLink to external storage below:\n{link}\n{message}"
 }
 
+create_promocode_msg = {
+    "ru": "Выбери как ты хочешь создать промокод",
+    "en": "Choose how you want to create promocode"
+}
+
+custom_promocode = {
+    "ru": "Введи промокод в следующем сообщении",
+    "en": "Write a custom promocode in the next message",
+}
+
+promocode_create_success = {
+    "ru": "Промокод успешно создан: {code}",
+    "en": "Promocode is created successfully: {code}",
+}
+
+promocode_create_fail = {
+    "ru": "Произошла ошибка, попробуй сначала",
+    "en": "Some error occurred, start over",
+}
+
+choose_promocode_subscription_type = {
+    "ru": "Выбери тип подписки по промокоду",
+    "en": "Choose a promocode subscription type",
+}
+
+choose_promocode_total_use = {
+    "ru": "Сколько раз можно будет использовать промокод? Введи число",
+    "en": "Write a total promocode use in the next message as a number",
+}
+
 promocode = {
     "ru": "У тебя есть промокод? Отлично! Введи его следующим сообщением",
     "en": "You have a promo code? Great! Please send it in the next message"
@@ -207,6 +247,7 @@ subscription_expired = {
     "ru": "Ваша подписка истекла.\nЧтобы оформить новую подписку воспользуйся командой\n/GET_SUBSCRIPTION",
     "en": "Your current subscription is expired.\nTo get a new one please use the command\n/GET_SUBSCRIPTION"
 }
+
 
 def get_subscription_message(subscription_type: SubscriptionType, language_code: str) -> str:
     week_msg = {

@@ -4,9 +4,9 @@ from collections.abc import Callable
 from aiogram.types import CallbackQuery, FSInputFile, LinkPreviewOptions
 from loguru import logger
 
+from talkushka_service.app.app_worker import AppWorker
 from talkushka_service.app.db_operation import decrease_limit, validate_limit
 from talkushka_service.app.replies import external_storage_ms, get_limit_reply
-from talkushka_service.app_worker import AppWorker
 from talkushka_service.model.objects import AppOperation, DownloadTask, VideoOptions, YouTubeVideo
 
 

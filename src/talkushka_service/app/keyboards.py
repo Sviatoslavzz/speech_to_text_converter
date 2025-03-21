@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 
 from talkushka_service.app.replies import choose_channel_button, choose_file_button, choose_video_button
+from talkushka_service.db.model import SubscriptionType
 from talkushka_service.model.objects import VideoOptions
 
 main_menu = {
@@ -141,6 +142,7 @@ def generate_option_keyboard(options: list[VideoOptions]) -> InlineKeyboardMarku
         ]
     )
 
+
 change_language_menu = {
     "ru": InlineKeyboardMarkup(
         inline_keyboard=[
@@ -155,3 +157,30 @@ change_language_menu = {
         ]
     ),
 }
+
+create_promocode = {
+    "ru": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="написать свой", callback_data="create_custom_promocode")],
+            [InlineKeyboardButton(text="сгенерировать случайный", callback_data="generate_promocode")],
+        ]
+    ),
+    "en": InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="write custom", callback_data="create_custom_promocode")],
+            [InlineKeyboardButton(text="generate random", callback_data="generate_promocode")],
+        ]
+    ),
+}
+
+def get_subscription_type_as_kb():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=s_type.name, callback_data=f"{s_type.name}_{s_type.value}"
+                )
+            ]
+            for s_type in SubscriptionType
+        ]
+    )

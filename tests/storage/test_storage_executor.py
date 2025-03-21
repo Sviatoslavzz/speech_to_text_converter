@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from talkushka_service.app_worker import run_storage_executor
+from talkushka_service.app.app_worker import run_storage_executor
 from talkushka_service.executors.storage_executor import StorageExecutor
 from talkushka_service.model.objects import DownloadTask, VideoOptions, YouTubeVideo
 

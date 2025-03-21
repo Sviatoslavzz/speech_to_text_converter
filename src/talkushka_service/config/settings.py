@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "DEBUG"
 
-    UPDATE_LIMIT_HOUR_UTC: int = 19
+    UPDATE_LIMIT_HOUR_UTC: int = 0
 
     VIDEO_LIMIT: int = 10
     AUDIO_LIMIT: int = 30

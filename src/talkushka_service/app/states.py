@@ -17,3 +17,6 @@ class HelpRoute(StatesGroup):
 
 class PromocodeRoute(StatesGroup):
     receive = State()
+    custom = State()
+    generate = State()
+    total_use = State()

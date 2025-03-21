@@ -11,7 +11,7 @@ from talkushka_service.app.replies import (
 )
 from talkushka_service.config.settings import settings
 from talkushka_service.db.dao import PromocodeDAO, SubscriptionDAO, UserDAO, UserLimitDAO
-from talkushka_service.db.model import Privilege
+from talkushka_service.db.model import Privilege, SubscriptionType
 from talkushka_service.model.objects import AppOperation
 
 
@@ -101,10 +101,20 @@ async def update_user_limits():
     )
 
 
-async def check_subscription() -> list[int]:
+async def check_subscription() -> list[tuple[int, str]]:
     """
     Checks user subscription.
     :return: list of user ids with deactivated subscriptions.
     """
 
     return await UserDAO.remove_subscriptions(subscription_ids=await SubscriptionDAO.deactivate_expired())
+
+
+async def is_able_to_create_promocode(user_id: int) -> bool:
+    user = await UserDAO.get_one_or_none(user_id=user_id)
+    return bool(user and user.privilege == Privilege.admin)
+
+
+async def create_new_promocode(code: str, total_use: int, subscription_type: SubscriptionType) -> bool:
+    new_promocode = await PromocodeDAO.add_by_kwargs(code=code, total_use=total_use, type=subscription_type)
+    return bool(new_promocode)

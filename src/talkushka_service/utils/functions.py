@@ -1,6 +1,7 @@
 import importlib.metadata as im
 import subprocess
 from pathlib import Path
+from uuid import uuid4
 
 from dateutil.relativedelta import relativedelta
 from loguru import logger
@@ -99,3 +100,6 @@ def relative_delta_by_s_type(s_type: SubscriptionType) -> relativedelta:
         return relativedelta(year=1)
     logger.error(f"error getting relativedelta : Unsupported SubscriptionType: {s_type}")
     raise AssertionError("Unsupported SubscriptionType")
+
+def generate_promocode() -> str:
+    return str(uuid4())
