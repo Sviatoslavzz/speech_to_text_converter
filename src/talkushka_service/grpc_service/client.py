@@ -35,7 +35,7 @@ class GrpcClient:
         Create and configure an SSL context for the gRPC client.
         """
         try:
-            cert_path = get_project_root() / "cert/whisper"
+            cert_path = get_project_root() / "cert/talkushka-transcriber"
             ssl_context = create_default_context(Purpose.SERVER_AUTH)
             ssl_context.load_verify_locations(cafile=cert_path / "ca.crt")
             ssl_context.load_cert_chain(certfile=cert_path / "client.crt", keyfile=cert_path / "client.key")
@@ -90,7 +90,7 @@ class GrpcClient:
     @__update_timer
     async def stream_audio_file(self, path_: Path) -> tuple[bool, Path | None]:
         """
-        Streams audio file to grpc Server of 'Talkushka whisper' service
+        Streams audio file to grpc Server of 'talkushka-transcriber' service
         """
 
         async def generate_chunks() -> AsyncIterator[AudioChunk]:

@@ -141,7 +141,7 @@ class AppWorker:
                 task.result = False
                 task.message.update(
                     {"ru": "К сожалению, невозможно передать файл больше 50 мб.",
-                     "en": "Unfortunately, there is limit for telegram file transfer = 50 MB "}
+                     "en": "Unfortunately, there is limit for telegram file transfer > 50 MB "}
                 )
                 await self.remove_file(task.local_path)
                 logger.error("Failed attempt to transfer file > 50 MB directly to TG without storage.\n"
@@ -219,7 +219,8 @@ class AppWorker:
                         size=self.sem_queue_size)
             status, audio_file_path = await asyncio.to_thread(convert_to_m4a, local_path)
 
-        await self.remove_file(local_path)
+        if audio_file_path != local_path:
+            asyncio.create_task(self.remove_file(local_path))
 
         if not status:
             return False, None
@@ -235,7 +236,7 @@ class AppWorker:
         self.sem_queue_size += 1
         async with self.semaphore:
             self.sem_queue_size -= 1
-            logger.info("{cls} : tasks waiting in semaphore {size}",
+            logger.debug("{cls} : tasks waiting in semaphore {size}",
                         cls=self.__class__.__name__,
                         size=self.sem_queue_size)
             executor.put_task(task_)

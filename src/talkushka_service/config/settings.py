@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     VIDEO_LIMIT: int = 10
     AUDIO_LIMIT: int = 30
     SUBTITLE_LIMIT: int = 100
-    TRANSCRIPTION_LIMIT: int = 0
+    TRANSCRIPTION_LIMIT: int = 3
 
 
 settings = Settings()

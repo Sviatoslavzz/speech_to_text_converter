@@ -30,7 +30,7 @@ requires-python = ">=3.12"
 
 [project.optional-dependencies]
 dev = [
-    "ruff~=0.9.6",
+    "ruff~=0.11",
     "betterproto[compiler]==2.0.0b7"
 ]
 test = [
@@ -40,7 +40,7 @@ test = [
 ]
 
 [project.scripts]
-talkushka_service = "talkushka_service.main:main"
+talkushka-service = "talkushka_service.main:main"
 
 [tool.ruff]
 line-length = 120

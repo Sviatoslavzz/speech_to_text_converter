@@ -7,7 +7,7 @@ WHISPER_PROTO_DIR = src/proto_gen/whisper
 
 run_bot:
 	@echo "Launching telegram bot app"
-	talkushka_service
+	talkushka-service
 
 install:
 	pip install -e . -U

@@ -23,9 +23,8 @@ async def start_bot(bot_conf: BotConfig):
     dp = Dispatcher()
     dp.include_routers(cmd_start_router, cmd_help_router, create_promocode_router, use_promocode_router, app_router)  # noqa F405
 
-    await AppWorker.get_instance().start_check_subscription_coro(bot)
-
     try:
+        await AppWorker.get_instance().start_check_subscription_coro(bot)
         logger.info("Starting bot polling...")
         await dp.start_polling(bot)
     except Exception as e:

@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 
 from aiogram import F, Router
 from aiogram.filters import Command
@@ -35,6 +36,7 @@ from talkushka_service.model.objects import (
 )
 
 app_router = Router()
+
 
 @app_router.message(Command("get_transcription"))
 async def command_get_transcription_handler(message: Message):
@@ -124,14 +126,18 @@ async def file_receiver(message: Message, state: FSMContext):
 
     status, text_file_path = await AppWorker.get_instance().request_transcription_api(message, file)
     if status:
-        await message.answer_document(FSInputFile(text_file_path))
-        await AppWorker.get_instance().remove_file(text_file_path)
+        await message.answer_document(FSInputFile(path=text_file_path,
+                                                  filename=Path(file.file_name).with_suffix(
+                                                      text_file_path.suffix).__fspath__()))
+        asyncio.create_task(decrease_limit(message.from_user.id, AppOperation.TRANSCRIPTION, 1))
+        asyncio.create_task(AppWorker.get_instance().remove_file(text_file_path))
         logger.info("{user}:{id}:transcription sent", user=message.from_user.username, id=message.from_user.id)
-        await decrease_limit(message.from_user.id, AppOperation.TRANSCRIPTION, 1)
     else:
         await message.answer(rp.transcriber_unavailable[lc_])
         logger.warning("{user}:{id}:failed to sent transcription", user=message.from_user.username,
                        id=message.from_user.id)
+
+    await message.delete()
 
 
 @app_router.callback_query(F.data == "download_video", UserRoute.action)

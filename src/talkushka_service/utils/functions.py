@@ -74,6 +74,9 @@ def convert_to_m4a(path_: Path) -> tuple[bool, Path]:
     """
     Converts any audio/video file to audio .m4a aac format using ffmpeg
     """
+    if path_.suffix == ".m4a":
+        return True, path_
+
     new_path = path_.with_suffix(".m4a")
     command = ["ffmpeg", "-i", path_, "-vn", "-movflags", "+faststart", "-c:a", "aac", "-b:a", "128k", new_path]
 
