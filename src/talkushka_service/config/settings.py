@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     AUDIO_LIMIT: int = 30
     SUBTITLE_LIMIT: int = 100
     TRANSCRIPTION_LIMIT: int = 3
+    PROJECT_NAME: str = "talkushka-service"
 
 
 settings = Settings()

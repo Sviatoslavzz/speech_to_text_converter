@@ -28,7 +28,7 @@ class ConfigModelFileType:
             return self._config_class(self._model, source_path)
         except Exception as e:
             logger.error(f"Exception while parsing config file: {e}")
-            raise
+            raise e
 
 
 def get_base_parser():

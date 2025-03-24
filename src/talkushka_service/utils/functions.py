@@ -6,6 +6,7 @@ from uuid import uuid4
 from dateutil.relativedelta import relativedelta
 from loguru import logger
 
+from talkushka_service.config.settings import settings
 from talkushka_service.db.model import SubscriptionType
 from talkushka_service.storage.dropbox_storage import DropBox
 
@@ -54,10 +55,13 @@ def validate_db_storages(storages: list):
 
 def get_project_root() -> Path:
     path_ = Path(__file__).parent
-    while path_.name != "src":
+
+    while path_.name != settings.PROJECT_NAME:
+        if path_.__fspath__() == path_.anchor:
+            return path_ / settings.PROJECT_NAME
         path_ = path_.parent
 
-    return path_.parent
+    return path_.parent / settings.PROJECT_NAME
 
 
 def create_saving_dir(dir_: str) -> Path:
