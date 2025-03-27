@@ -1,6 +1,6 @@
 [project]
 name = "talkushka_service"
-version = "2.2.4"
+version = "2.2.5"
 description = "telegram bot service that is capable of download audio/video/text by youtube video/channel link, part of talkushka ecosystem"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
