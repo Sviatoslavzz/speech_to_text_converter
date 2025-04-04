@@ -70,7 +70,7 @@ class YouTubeLoader:
         return new_title.strip("_").lower()
 
     @staticmethod
-    def __async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
+    def _async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         async def wrapper(self, *args, **kwargs):  # ANN202
             loop = asyncio.get_running_loop()
@@ -80,7 +80,7 @@ class YouTubeLoader:
 
         return wrapper
 
-    @__async_wrap
+    @_async_wrap
     def get_video_options(self, link: str) -> list[VideoOptions]:
         """
         Loads and sorts all available video formats with the highest vbr (video bitrate).
@@ -112,7 +112,7 @@ class YouTubeLoader:
 
         return list(resolution_dict)
 
-    @__async_wrap
+    @_async_wrap
     def download_audio(
             self, task: DownloadTask, format_: str = "m4a", quality: str = "best", yt_dlp_config: dict | None = None
     ) -> DownloadTask:
@@ -155,7 +155,7 @@ class YouTubeLoader:
 
         return task
 
-    @__async_wrap
+    @_async_wrap
     def download_video(self, task: DownloadTask, yt_dlp_config: dict | None = None) -> DownloadTask:
         """
         Downloads video from the YouTube video.
@@ -186,7 +186,7 @@ class YouTubeLoader:
 
         return task
 
-    @__async_wrap
+    @_async_wrap
     def get_captions(self, task: DownloadTask) -> DownloadTask:
         """
         Downloads captions from the YouTube video.
@@ -194,7 +194,7 @@ class YouTubeLoader:
         :return: filled DownloadTask
         """
         title = f"{task.id}{self.prepare_title(task.video.title)}"
-        lc = None
+
         try:
             available_transcripts = YouTubeTranscriptApi.list_transcripts(video_id=task.video.id)
             transcript = next(iter(available_transcripts), None)

@@ -289,6 +289,12 @@ async def download_subtitle_handler(callback: CallbackQuery, state: FSMContext):
 async def any_mes(message: Message):
     logger.info("{username}:{id}:message:{text}", username=message.from_user.username,
                 id=message.from_user.id, text=message.text)
+
+    logger.warning(message.content_type)
+
+    file = message.voice
+    file_info = await message.bot.get_file(file.file_id)
+
     sent = await message.answer("🤔")
     await asyncio.sleep(5)
     await message.delete()

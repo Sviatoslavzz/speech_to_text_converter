@@ -76,7 +76,14 @@ class AppWorker:
             chat_ids = await check_subscription()
             for chat_id, lc in chat_ids:
                 await bot.send_message(chat_id=chat_id, text=subscription_expired[lc])
-                await bot.send_message(chat_id=chat_id, text=limits_info_message[lc])
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text=limits_info_message[lc].format(video_limit=settings.VIDEO_LIMIT,
+                                                        audio_limit=settings.AUDIO_LIMIT,
+                                                        subtitle_limit=settings.SUBTITLE_LIMIT,
+                                                        transcription_limit=settings.TRANSCRIPTION_LIMIT,
+                                                        reset_hour=settings.UPDATE_LIMIT_HOUR_UTC + 4)
+                )
             await asyncio.sleep(HOUR)
 
     @staticmethod
@@ -88,22 +95,20 @@ class AppWorker:
 
     @staticmethod
     async def launch_one_coroutine(async_worker: Callable, id_: str, videos: list[YouTubeVideo],
-                                   options: VideoOptions) -> AsyncGenerator[list[asyncio.Task], None]:
+                                   options: VideoOptions) -> AsyncGenerator[asyncio.Task, None]:
+        """
+        :returns:  asyncio.Task generator
+        """
         for video in videos:
-            yield [asyncio.create_task(async_worker(DownloadTask(video=video, id=id_, options=options)))]
+            yield asyncio.create_task(async_worker(DownloadTask(video=video, id=id_, options=options)))
 
     @staticmethod
     def launch_coroutines(async_worker: Callable, id_: str, videos: list, options: VideoOptions) -> list[asyncio.Task]:
+        """
+        Creates asyncio.Tasks for all videos.
+        """
         return [
-            asyncio.create_task(
-                async_worker(
-                    DownloadTask(
-                        video=video,
-                        id=id_,
-                        options=options,
-                    )
-                )
-            )
+            asyncio.create_task(async_worker(DownloadTask(video=video, id=id_, options=options)))
             for video in videos
         ]
 
@@ -237,8 +242,8 @@ class AppWorker:
         async with self.semaphore:
             self.sem_queue_size -= 1
             logger.debug("{cls} : tasks waiting in semaphore {size}",
-                        cls=self.__class__.__name__,
-                        size=self.sem_queue_size)
+                         cls=self.__class__.__name__,
+                         size=self.sem_queue_size)
             executor.put_task(task_)
             while True:
                 result = await asyncio.to_thread(executor.get_result)

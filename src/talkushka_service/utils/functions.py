@@ -9,6 +9,7 @@ from loguru import logger
 
 from talkushka_service.config.settings import settings
 from talkushka_service.db.model import SubscriptionType
+from talkushka_service.model.objects import AppOperation
 from talkushka_service.storage.dropbox_storage import DropBox
 
 
@@ -111,3 +112,13 @@ def relative_delta_by_s_type(s_type: SubscriptionType) -> relativedelta:
 
 def generate_promocode() -> str:
     return str(uuid4())
+
+def get_app_operation(worker_name: str) -> AppOperation:
+    parameter = AppOperation.VIDEO
+
+    if worker_name == "download_audio_worker":
+        parameter = AppOperation.AUDIO
+    elif worker_name == "download_subtitles_worker":
+        parameter = AppOperation.SUBTITLE
+
+    return parameter

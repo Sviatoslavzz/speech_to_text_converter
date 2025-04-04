@@ -104,7 +104,7 @@ async def update_user_limits():
 async def check_subscription() -> list[tuple[int, str]]:
     """
     Checks user subscription.
-    :return: list of user ids with deactivated subscriptions.
+    :return: list of user chat_id's with deactivated subscriptions and user language codes.
     """
 
     return await UserDAO.remove_subscriptions(subscription_ids=await SubscriptionDAO.deactivate_expired())
