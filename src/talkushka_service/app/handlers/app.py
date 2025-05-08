@@ -15,6 +15,11 @@ from talkushka_service.app.db_operation import (
     validate_limit,
 )
 from talkushka_service.app.filters import MainButtonFilter
+from talkushka_service.app.handlers.support_handlers import (
+    check_content_type,
+    check_privilege_and_load,
+    task_completion_loop,
+)
 from talkushka_service.app.keyboards import (
     action_menu,
     generate_option_keyboard,
@@ -23,11 +28,6 @@ from talkushka_service.app.keyboards import (
     standard_video_options_menu,
 )
 from talkushka_service.app.states import UserRoute
-from talkushka_service.app.support_handlers import (
-    check_content_type,
-    check_privilege_and_load,
-    task_completion_loop,
-)
 from talkushka_service.model.objects import (
     AppOperation,
     DownloadTask,

@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
 
 dependencies = [
-    "yt_dlp~=2025.3",
+    "yt_dlp~=2025",
     "youtube-transcript-api~=0.6",
     "google-api-core~=2.24.1",
     "google-api-python-client~=2.161",

@@ -9,6 +9,7 @@ import aiofiles.os
 from aiogram import Bot
 from loguru import logger
 
+from talkushka_service.api_clients.youtube_api import YouTubeClient
 from talkushka_service.app.db_operation import check_subscription, update_user_limits
 from talkushka_service.app.replies import limits_info_message, subscription_expired
 from talkushka_service.config.models import BaseConfig
@@ -16,11 +17,10 @@ from talkushka_service.config.settings import settings
 from talkushka_service.executors.process_executor import ProcessExecutor
 from talkushka_service.executors.storage_executor import StorageExecutor
 from talkushka_service.grpc_service.client import GrpcClient
+from talkushka_service.loaders.youtube_loader import YouTubeLoader
 from talkushka_service.model.objects import HOUR, MB, DownloadTask, VideoOptions, YouTubeVideo
 from talkushka_service.storage.storage_worker import storage_worker_as_target
 from talkushka_service.utils.functions import convert_to_m4a
-from talkushka_service.youtube_clients.youtube_api import YouTubeClient
-from talkushka_service.youtube_clients.youtube_loader import YouTubeLoader
 
 IS_MACOS = platform.system() == "Darwin"
 

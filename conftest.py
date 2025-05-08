@@ -4,11 +4,11 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
+from talkushka_service.api_clients.youtube_api import YouTubeClient
 from talkushka_service.config.models import DropboxConfig
 from talkushka_service.executors.process_executor import ProcessExecutor
+from talkushka_service.loaders.youtube_loader import YouTubeLoader
 from talkushka_service.storage.dropbox_storage import DropBox
-from talkushka_service.youtube_clients.youtube_api import YouTubeClient
-from talkushka_service.youtube_clients.youtube_loader import YouTubeLoader
 
 SAVING_FOLDER = "saved_files"
 

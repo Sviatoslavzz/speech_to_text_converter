@@ -5,7 +5,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 
 from talkushka_service.app.app_worker import AppWorker
-from talkushka_service.app.handlers import *  # noqa F403
+from talkushka_service.app.handlers import routers
 from talkushka_service.config.base import YAMLConfig
 from talkushka_service.config.logger_settings import logger
 from talkushka_service.config.models import BotConfig
@@ -21,7 +21,7 @@ async def start_bot(bot_conf: BotConfig):
 
     bot = Bot(token=bot_conf.token_env, session=session)
     dp = Dispatcher()
-    dp.include_routers(cmd_start_router, cmd_help_router, create_promocode_router, use_promocode_router, app_router)  # noqa F405
+    dp.include_routers(*routers)
 
     try:
         await AppWorker.get_instance().start_check_subscription_coro(bot)

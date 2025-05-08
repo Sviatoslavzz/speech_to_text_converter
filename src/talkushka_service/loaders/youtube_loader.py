@@ -10,10 +10,11 @@ import yt_dlp
 from loguru import logger
 from youtube_transcript_api import NoTranscriptFound, YouTubeTranscriptApi
 
+from talkushka_service.loaders.base_loader import BaseLoader
 from talkushka_service.model.objects import DownloadTask, VideoOptions
 
 
-class YouTubeLoader:
+class YouTubeLoader(BaseLoader):
     """
     Singleton loader client.
     `yt_dlp` and `youtube_transcript_api` libs are used.
@@ -36,8 +37,8 @@ class YouTubeLoader:
 
     def __init__(self, directory: Path, heavy_pool_size: int, light_pool_size: int, proxy: str | None = None):
         self.dir = directory
-        self.pool_heavy = ThreadPoolExecutor(max_workers=heavy_pool_size)
-        self.pool_light = ThreadPoolExecutor(max_workers=light_pool_size)
+        self.pool_heavy = ThreadPoolExecutor(max_workers=heavy_pool_size, thread_name_prefix="pool_heavy")
+        self.pool_light = ThreadPoolExecutor(max_workers=light_pool_size, thread_name_prefix="pool_light")
         if proxy:
             self.__config["proxy"] = proxy
 
@@ -49,25 +50,6 @@ class YouTubeLoader:
     @classmethod
     def get_instance(cls):
         return cls._instance
-
-    @staticmethod
-    def prepare_title(title: str) -> str:
-        """
-        Normalizes a string to make it lowercase consisting of letters, digits and underscores.
-        :param title: a string to normalize
-        :return: str
-        """
-        new_title = ""
-        flag_fill = True
-        for letter in title:
-            if letter.isalpha() or letter.isdigit():
-                new_title += letter
-                flag_fill = True
-            elif flag_fill:
-                new_title += "_"
-                flag_fill = False
-
-        return new_title.strip("_").lower()
 
     @staticmethod
     def _async_wrap(func: Callable[..., Any]) -> Callable[..., Any]:

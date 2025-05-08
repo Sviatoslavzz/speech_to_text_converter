@@ -2,6 +2,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    TITLE: str = "talkushka-service"
+
     DB_DRIVER_NAME: str = "postgresql+asyncpg"
     DB_USERNAME: str = ""
     DB_PASSWORD: str = ""
@@ -11,6 +13,8 @@ class Settings(BaseSettings):
     DB_SCHEMA: str = "talkushka_service"
 
     LOG_LEVEL: str = "DEBUG"
+    LOG_STREAM_HANDLER: bool = True
+    LOG_FILE_HANDLER: bool = False
 
     UPDATE_LIMIT_HOUR_UTC: int = 0
 
