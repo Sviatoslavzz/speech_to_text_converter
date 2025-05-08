@@ -1,12 +1,12 @@
 [project]
 name = "talkushka_service"
-version = "2.2.5"
+version = "2.2.7"
 description = "telegram bot service that is capable of download audio/video/text by youtube video/channel link, part of talkushka ecosystem"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
 
 dependencies = [
-    "yt_dlp~=2025.3",
+    "yt_dlp~=2025",
     "youtube-transcript-api~=0.6",
     "google-api-core~=2.24.1",
     "google-api-python-client~=2.161",
