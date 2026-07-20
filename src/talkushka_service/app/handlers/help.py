@@ -37,8 +37,9 @@ async def command_help_handler(message: Message):
 async def change_language_handler(callback: CallbackQuery):
     logger.info(f"{callback.from_user.username}:{callback.from_user.id}:callback:change_language")
     lc_ = await get_lc(callback)
-    sent = await callback.message.answer(change_language_reply[lc_].format(lc=lc_),
-                                         reply_markup=change_language_menu[lc_])
+    sent = await callback.message.answer(
+        change_language_reply[lc_].format(lc=lc_), reply_markup=change_language_menu[lc_]
+    )
     await asyncio.sleep(10)
     await sent.delete()
 
@@ -61,8 +62,7 @@ async def contact_helpdesk_handler(callback: CallbackQuery, state: FSMContext):
 async def helpdesk_validation_handler(message: Message, state: FSMContext):
     logger.info(f"{message.from_user.username}:{message.from_user.id}:router:helpdesk_validation")
     lc_ = await get_lc(message)
-    await message.answer(validate_helpdesk_message_reply[lc_].format(r=message.text),
-                         reply_markup=approve_menu[lc_])
+    await message.answer(validate_helpdesk_message_reply[lc_].format(r=message.text), reply_markup=approve_menu[lc_])
     await state.update_data(validation=message.text)
     await state.set_state(HelpRoute.approve)
 
@@ -74,10 +74,11 @@ async def approve_helpdesk_request_handler(callback: CallbackQuery, state: FSMCo
     state_data = await state.get_data()
 
     for chat_id in await get_helpdesk_chats():
-        await callback.bot.send_message(chat_id,
-                                        helpdesk_mess.format(un=callback.from_user.username,
-                                                             uid=callback.from_user.id) + \
-                                        state_data.get("validation", ""))
+        await callback.bot.send_message(
+            chat_id,
+            helpdesk_mess.format(un=callback.from_user.username, uid=callback.from_user.id)
+            + state_data.get("validation", ""),
+        )
     await state.clear()
 
 

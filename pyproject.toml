@@ -1,37 +1,36 @@
-[project]
+ [project]
 name = "talkushka_service"
-version = "2.2.9"
+version = "2.2.11"
 description = "telegram bot service that is capable of download audio/video/text by youtube video/channel link, part of talkushka ecosystem"
 readme = "README.md"
 authors = [{ name = "Sviatoslav Zaikin" }]
 
 dependencies = [
-    "yt_dlp",
-    "youtube-transcript-api~=0.6",
-    "google-api-core~=2.24.1",
-    "google-api-python-client~=2.161",
-    "loguru~=0.7",
-    "aiohttp~=3.11",
-    "aiogram~=3.17",
+    "yt_dlp[default]>=2026.2.4",
+    "youtube-transcript-api>=1.2",
+    "google-api-core>=2.29",
+    "google-api-python-client>=2.190",
+    "loguru==0.7.3",
+    "aiohttp>=3.13",
+    "aiogram>=3.25",
     "dropbox~=12.0",
     "setproctitle~=1.3",
     "python-dotenv",
-    "pydantic~=2.10",
+    "pydantic~=2.12",
+    "pydantic-settings~=2.13",
+    "sqlalchemy>=2.0",
     "aiofiles",
     "grpclib",
     "betterproto[rust-codec]==2.0.0b7",
     "pyyaml",
-    "sqlalchemy~=2.0",
-    "pydantic-settings~=2.8",
-    "asyncpg~=0.30",
-    "greenlet~=3.1",
+    "asyncpg~=0.31",
+    "greenlet>=3.3",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "ruff",
-    "betterproto[compiler]==2.0.0b7"
+    "betterproto[compiler]==2.0.0b7",
 ]
 test = [
     "pytest>=8.0.0,<9.0.0",
@@ -41,6 +40,10 @@ test = [
 
 [project.scripts]
 talkushka-service = "talkushka_service.main:main"
+
+[build-system]
+requires = ["uv_build>=0.11.28,<0.12"]
+build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 120
@@ -110,12 +113,8 @@ convention = "google"
 "conftest.py" = ["S101", "ANN001", "ANN201"]
 "src/talkushka_service/proto_gen/*" = ["RUF009", "F401", "UP035"]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+[tool.uv]
+required-version = ">=0.11.0"
 
 [tool.pytest.ini_options]
 addopts = '''

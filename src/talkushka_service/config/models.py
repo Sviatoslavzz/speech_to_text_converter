@@ -13,9 +13,9 @@ storage_class = TypeVar("storage_class")  # Todo bound to abstract storage
 
 
 class DropboxConfig(BaseModel):
-    cls: type[storage_class] | None = Field(default_factory=partial(get_storage_cls, "DropBox"),
-                                            title="Storage class",
-                                            description="DropBox")
+    cls: type[storage_class] | None = Field(
+        default_factory=partial(get_storage_cls, "DropBox"), title="Storage class", description="DropBox"
+    )
     storage_time: float | None = Field(default=5 * MINUTE, title="Storage time in minutes")
     refresh_token_env: str = Field(..., title="Environment variable name")
     app_key_env: str = Field(..., title="Environment variable name")
@@ -61,7 +61,7 @@ class StorageConfig(BaseModel):
     @classmethod
     def validate_storages(cls, value) -> dict[str, DropboxConfig]:
         if isinstance(value, list):
-            return {list(item.keys())[0]: DropboxConfig(**list(item.values())[0]) for item in value}
+            return {next(iter(item.values())): DropboxConfig(**next(iter(item.values()))) for item in value}
         raise AssertionError("Invalid format for storages")
 
     @model_validator(mode="after")
@@ -96,8 +96,9 @@ class YouTubeConfig(BaseModel):
     api_key_env: str = Field(..., title="Environment variable name")
     heavy_pool_size: int | None = Field(20, title="Video | audio download pool size")
     light_pool_size: int | None = Field(40, title="Text download pool size")
-    save_dir: Path | None = Field(default_factory=partial(create_saving_dir, "saved_files"),
-                                  title="Directory for saving temp files")
+    save_dir: Path | None = Field(
+        default_factory=partial(create_saving_dir, "saved_files"), title="Directory for saving temp files"
+    )
     proxies: list[str] | None = Field(None, title="List of proxies")
 
     @field_validator("api_key_env", mode="before")
@@ -116,8 +117,9 @@ class YouTubeConfig(BaseModel):
 class GrpcConfig(BaseModel):
     host: str | None = Field("localhost", title="gRPC server host")
     port: int | None = Field(50051, title="gRPC server port")
-    channel_idle_time: int | None = Field(10, title="Channel idle time in minutes",
-                                          description="time to have channel opened without usage")
+    channel_idle_time: int | None = Field(
+        10, title="Channel idle time in minutes", description="time to have channel opened without usage"
+    )
 
 
 class BaseConfig(BaseModel):

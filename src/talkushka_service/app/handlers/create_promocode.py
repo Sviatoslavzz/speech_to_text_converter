@@ -65,6 +65,7 @@ async def promocode_subscription_type_handler(callback: CallbackQuery, state: FS
     await callback.message.answer(choose_promocode_total_use[lc])
     await state.set_state(PromocodeRoute.total_use)
 
+
 @create_promocode_router.message(PromocodeRoute.total_use)
 async def promocode_total_use_handler(message: Message, state: FSMContext):
     logger.info(f"{message.from_user.username}:{message.from_user.id}:state:promocode_total_use")

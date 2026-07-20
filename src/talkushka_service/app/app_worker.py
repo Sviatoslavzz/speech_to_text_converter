@@ -37,10 +37,12 @@ class AppWorker:
     def __init__(self, service_config: BaseConfig):
         self.config = service_config
         self.youtube_client = YouTubeClient(self.config.youtube.api_key_env)
-        self.loader = YouTubeLoader(directory=self.config.youtube.save_dir,
-                                    heavy_pool_size=self.config.youtube.heavy_pool_size,
-                                    light_pool_size=self.config.youtube.light_pool_size,
-                                    proxy=self.config.youtube.proxies or None)
+        self.loader = YouTubeLoader(
+            directory=self.config.youtube.save_dir,
+            heavy_pool_size=self.config.youtube.heavy_pool_size,
+            light_pool_size=self.config.youtube.light_pool_size,
+            proxy=self.config.youtube.proxies or None,
+        )
 
         # semaphore is limiting the number of threads that awaits separate process queue results
         self.semaphore = asyncio.Semaphore(self.config.youtube.light_pool_size * 2)
@@ -87,8 +89,9 @@ class AppWorker:
             logger.error("File not found : unable to remove {f_name}", f_name=file.__fspath__())
 
     @staticmethod
-    async def launch_one_coroutine(async_worker: Callable, id_: str, videos: list[YouTubeVideo],
-                                   options: VideoOptions) -> AsyncGenerator[list[asyncio.Task], None]:
+    async def launch_one_coroutine(
+        async_worker: Callable, id_: str, videos: list[YouTubeVideo], options: VideoOptions
+    ) -> AsyncGenerator[list[asyncio.Task], None]:
         for video in videos:
             yield [asyncio.create_task(async_worker(DownloadTask(video=video, id=id_, options=options)))]
 
@@ -140,17 +143,22 @@ class AppWorker:
             if not self.config.storage.storages:
                 task.result = False
                 task.message.update(
-                    {"ru": "К сожалению, невозможно передать файл больше 50 мб.",
-                     "en": "Unfortunately, there is limit for telegram file transfer > 50 MB "}
+                    {
+                        "ru": "К сожалению, невозможно передать файл больше 50 мб.",
+                        "en": "Unfortunately, there is limit for telegram file transfer > 50 MB ",
+                    }
                 )
                 await self.remove_file(task.local_path)
-                logger.error("Failed attempt to transfer file > 50 MB directly to TG without storage.\n"
-                             "Please set up at least 1 storage or use local server.")
+                logger.error(
+                    "Failed attempt to transfer file > 50 MB directly to TG without storage.\n"
+                    "Please set up at least 1 storage or use local server."
+                )
                 return task
 
             if task.id in task.local_path.__fspath__():
                 task.local_path = task.local_path.rename(
-                    task.local_path.with_name(task.local_path.name.lstrip(task.id)))
+                    task.local_path.with_name(task.local_path.name.lstrip(task.id))
+                )
             tasks = await self.run_storage_executor([task])
             return tasks[0]
 
@@ -214,9 +222,9 @@ class AppWorker:
         self.sem_queue_size += 1
         async with self.semaphore:
             self.sem_queue_size -= 1
-            logger.info("{cls} : tasks waiting in semaphore {size}",
-                        cls=self.__class__.__name__,
-                        size=self.sem_queue_size)
+            logger.info(
+                "{cls} : tasks waiting in semaphore {size}", cls=self.__class__.__name__, size=self.sem_queue_size
+            )
             status, audio_file_path = await asyncio.to_thread(convert_to_m4a, local_path)
 
         if audio_file_path != local_path:
@@ -236,9 +244,9 @@ class AppWorker:
         self.sem_queue_size += 1
         async with self.semaphore:
             self.sem_queue_size -= 1
-            logger.debug("{cls} : tasks waiting in semaphore {size}",
-                        cls=self.__class__.__name__,
-                        size=self.sem_queue_size)
+            logger.debug(
+                "{cls} : tasks waiting in semaphore {size}", cls=self.__class__.__name__, size=self.sem_queue_size
+            )
             executor.put_task(task_)
             while True:
                 result = await asyncio.to_thread(executor.get_result)
@@ -259,9 +267,11 @@ class AppWorker:
         executor = StorageExecutor.get_instance()
         if not executor:
             executor = StorageExecutor(storage_worker_as_target, config=self.config.storage.storages)
-            executor.configure(q_size=self.config.storage.q_size,
-                               context="spawn" if IS_MACOS else "fork",
-                               process_name="python_storage_worker")
+            executor.configure(
+                q_size=self.config.storage.q_size,
+                context="spawn" if IS_MACOS else "fork",
+                process_name="python_storage_worker",
+            )
             executor.set_name("storage_worker")
             executor.start()
             await asyncio.sleep(5)  # delay for storage worker to start all storages

@@ -1,4 +1,6 @@
+import asyncio
 import re
+from pprint import pprint
 
 from aiohttp import ClientSession
 from loguru import logger
@@ -69,8 +71,10 @@ class YouTubeClient:
                     if response_json["items"][0]["kind"] == "youtube#channel":
                         channel_id = response_json["items"][0]["id"]
                         logger.debug("Found a channel id: {ch_id}", ch_id=channel_id)
-                    elif response_json["items"][0]["kind"] == "youtube#searchResult" \
-                            and response_json["items"][0]["id"]["kind"] == "youtube#channel":
+                    elif (
+                        response_json["items"][0]["kind"] == "youtube#searchResult"
+                        and response_json["items"][0]["id"]["kind"] == "youtube#channel"
+                    ):
                         channel_id = response_json["items"][0]["id"]["channelId"]
                         logger.debug("Found a channel id: {ch_id}", ch_id=channel_id)
                     else:
@@ -117,7 +121,7 @@ class YouTubeClient:
                         logger.debug(
                             "Processing videos from {amount}.. to total: {total}",
                             amount=amount,
-                            total=response_json["pageInfo"]["totalResults"]
+                            total=response_json["pageInfo"]["totalResults"],
                         )
                         if response_json["items"] and response_json["items"][0]["snippet"]:
                             for item in response_json["items"]:
@@ -134,9 +138,11 @@ class YouTubeClient:
                                 amount += 1
                                 videos.append(video)
                         else:
-                            logger.warning("Unable to get video #{amount} info for playlist_id: {playlist_id}",
-                                           amount=amount,
-                                           playlist_id=playlist_id)
+                            logger.warning(
+                                "Unable to get video #{amount} info for playlist_id: {playlist_id}",
+                                amount=amount,
+                                playlist_id=playlist_id,
+                            )
                     next_page_token = response_json.get("nextPageToken")
                     params["pageToken"] = next_page_token
                     if not next_page_token:
@@ -182,6 +188,7 @@ class YouTubeClient:
                 }
                 async with session.get(url, params=params) as response:
                     response_json = await response.json()
+                    pprint(response_json)  # noqa: T203
                     if response_json.get("items") and response_json["items"][0]:
                         video = YouTubeVideo(
                             id=video_id,
@@ -192,7 +199,6 @@ class YouTubeClient:
                             title=response_json["items"][0]["snippet"]["title"],
                             link=None,
                         )
-                        video.generate_link()
                         logger.info("Found the video by id: {video_id}", video_id=video_id)
                     else:
                         logger.warning("Unable to get video by id: {video_id}", video_id=video_id)
@@ -200,3 +206,56 @@ class YouTubeClient:
             logger.error("Unable to get and form video info: {err}", err=error.__repr__())
 
         return video
+
+    async def get_captions(self, video_id: str) -> list[str] | None:
+        captions = await self.get_all_captions_by_video_id(video_id)
+        if not captions:
+            return None
+
+        for caption in captions:
+            caption_id = caption["id"]
+            async with ClientSession() as session:
+                url = f"{self.base_url}/captions/{caption_id}"
+                params = {
+                    "id": caption_id,
+                    "key": self.api_key,
+                }
+                async with session.get(url, params=params) as response:
+                    response_json = await response.json()
+                    pprint(response_json)  # noqa: T203
+
+    async def get_all_captions_by_video_id(self, video_id: str) -> list[str] | None:
+
+        try:
+            async with ClientSession() as session:
+                url = f"{self.base_url}/captions"
+                params = {
+                    "part": "snippet",
+                    "videoId": video_id,
+                    "key": self.api_key,
+                }
+                async with session.get(url, params=params) as response:
+                    response_json = await response.json()
+                    pprint(response_json)  # noqa: T203
+                    if response_json.get("items"):
+                        logger.debug("Found captions by video id: {video_id}", video_id=video_id)
+                        return response_json["items"]
+                    logger.warning("Unable to get captions by video id: {video_id}", video_id=video_id)
+        except Exception as error:
+            logger.error("Unable to get captions by video id: {err}", err=error.__repr__())
+            return None
+
+
+async def main():
+    api_client = YouTubeClient(api_key="AIzaSyCwScs_FL7ojj7se73PFfdcdhhapQ1Ma0E")
+    user_link = input("Enter the video link: ")
+    video_id = api_client.get_video_id(link=user_link)
+    print(video_id)
+    video = await api_client.get_video_by_id(video_id)
+    print(video)
+    captions = await api_client.get_captions(video_id)
+    print(captions)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

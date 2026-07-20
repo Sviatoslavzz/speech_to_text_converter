@@ -31,7 +31,7 @@ class SubscriptionType(enum.Enum):
 class User(Base):
     __table_args__ = (
         ForeignKeyConstraint(["subscription_id"], [f"{settings.DB_SCHEMA}.subscription.id"]),
-        {"schema": settings.DB_SCHEMA}
+        {"schema": settings.DB_SCHEMA},
     )
     __tablename__ = "user"
 
@@ -53,8 +53,9 @@ class Subscription(Base):
     __tablename__ = "subscription"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, unique=True)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True),
-                                                 server_default=text("TIMEZONE('utc', now())"))
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=text("TIMEZONE('utc', now())")
+    )
     is_active: Mapped[bool] = mapped_column(server_default=text("true"))
     type: Mapped[SubscriptionType]
     payment_uuid: Mapped[UUID | None] = mapped_column(UUID(as_uuid=True))
@@ -66,15 +67,17 @@ class Payment(Base):
     __table_args__ = (
         ForeignKeyConstraint(["user_id"], [f"{settings.DB_SCHEMA}.user.user_id"]),
         ForeignKeyConstraint(["subscription_id"], [f"{settings.DB_SCHEMA}.subscription.id"]),
-        {"schema": settings.DB_SCHEMA}
+        {"schema": settings.DB_SCHEMA},
     )
     __tablename__ = "payment"
 
-    uuid: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, unique=True,
-                                       server_default=text("gen_random_uuid()"))
+    uuid: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, unique=True, server_default=text("gen_random_uuid()")
+    )
     user_id: Mapped[int]
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True),
-                                                 server_default=text("TIMEZONE('utc', now())"))
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=text("TIMEZONE('utc', now())")
+    )
     amount: Mapped[float]
     method: Mapped[str]
     link: Mapped[str | None]
@@ -99,7 +102,7 @@ class Promocode(Base):
 class UserLimit(Base):
     __table_args__ = (
         ForeignKeyConstraint(["user_id"], [f"{settings.DB_SCHEMA}.user.user_id"], ondelete="CASCADE"),
-        {"schema": settings.DB_SCHEMA}
+        {"schema": settings.DB_SCHEMA},
     )
     __tablename__ = "user_limit"
 

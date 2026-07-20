@@ -50,11 +50,6 @@ def youtube_loader(saving_path):
 
 
 @pytest.fixture
-def transcriber_worker():
-    return TranscriberWorker().get_instance()
-
-
-@pytest.fixture
 def process_executor(request):
     target = request.param["target"]
     args = request.param.get("args", [])

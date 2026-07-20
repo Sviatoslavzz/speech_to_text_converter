@@ -78,7 +78,7 @@ class ProcessExecutor(AbstractExecutor):
                 cls=self.__class__.__name__,
                 name=self._name,
                 q_size=self._q_size,
-                context=self._context
+                context=self._context,
             )
             return
         logger.warning(f"{self.__class__.__name__} {self._name} already running")

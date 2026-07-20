@@ -76,12 +76,12 @@ artifacts/
 .idea/
 
 venv
+.venv
 deps.json
 
 saved_files
 
 .env
-.python-version
 *.binlog
 
 *.crt

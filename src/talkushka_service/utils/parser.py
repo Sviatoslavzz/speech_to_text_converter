@@ -10,10 +10,10 @@ from talkushka_service.utils.functions import get_version
 
 class ConfigModelFileType:
     def __init__(
-            self,
-            model: type[ConfigModelType],
-            config_class: type[YAMLConfig],
-            allow_empty: bool = False,
+        self,
+        model: type[ConfigModelType],
+        config_class: type[YAMLConfig],
+        allow_empty: bool = False,
     ):
         self._model = model
         self._config_class = config_class
@@ -22,7 +22,7 @@ class ConfigModelFileType:
     def __call__(self, source: str) -> YAMLConfig:
         source_path = Path(source)
         if not source_path.exists() and not self._allow_empty:
-                raise argparse.ArgumentTypeError(f'No such file or directory: "{source}"')
+            raise argparse.ArgumentTypeError(f'No such file or directory: "{source}"')
 
         try:
             return self._config_class(self._model, source_path)
@@ -32,10 +32,7 @@ class ConfigModelFileType:
 
 
 def get_base_parser():
-    parser = argparse.ArgumentParser(
-        add_help=False,
-        formatter_class=argparse.HelpFormatter
-    )
+    parser = argparse.ArgumentParser(add_help=False, formatter_class=argparse.HelpFormatter)
     help_group = parser.add_argument_group(title="Help")
     help_group.add_argument(
         "-h",
@@ -69,7 +66,7 @@ def get_parser(parser_: argparse.ArgumentParser | None = None) -> argparse.Argum
             allow_empty=False,
         ),
         help="path to configuration file.yml",
-        default="conf/base.yml"
+        default="conf/base.yml",
     )
 
     return parser_

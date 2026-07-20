@@ -1,38 +1,38 @@
 from talkushka_service.db.model import SubscriptionType
 from talkushka_service.model.objects import AppOperation
 
-welcome_message = {"ru":
-                       "Привет! Я Толкушка 👋\n"
-                       "Что я умею? 🤔\n\n"
-                       "1️⃣Действия с YouTube видео:\n"
-                       "🔹 Скачаю видео в нужном качестве\n"
-                       "🔹 Скачаю аудио\n"
-                       "🔹 Скачаю субтитры к видео\n"
-                       "🔹 Могу сделать все вышеперечисленное сразу для всех видео с канала - "
-                       "для этого нужна ссылка на канал.\n\n"
-                       "2️⃣Генерация текста:\n"
-                       "🔹 Могу сгенерировать текст по твоему аудио или видео файлу 🥹\n\n"
-                       "Наслаждайся 😎",
-                   "en":
-                       "Welcome to Talkushka chat-bot 👋\n"
-                       "What am I capable of? 🤔\n\n"
-                       "🔹 I can download a video by YouTube link with required quality\n"
-                       "🔹 I can download an audio by YouTube link\n"
-                       "🔹 I can download subtitles by YouTube link\n"
-                       "🔹 I can perform all the above for all YouTube channel videos.\n"
-                       "🔹 I can make a transcription for your audio or video file 🥹\n\n"
-                       "Enjoy 😎"
-                   }
+welcome_message = {
+    "ru": "Привет! Я Толкушка 👋\n"
+    "Что я умею? 🤔\n\n"
+    "1️⃣Действия с YouTube видео:\n"
+    "🔹 Скачаю видео в нужном качестве\n"
+    "🔹 Скачаю аудио\n"
+    "🔹 Скачаю субтитры к видео\n"
+    "🔹 Могу сделать все вышеперечисленное сразу для всех видео с канала - "
+    "для этого нужна ссылка на канал.\n\n"
+    "2️⃣Генерация текста:\n"
+    "🔹 Могу сгенерировать текст по твоему аудио или видео файлу 🥹\n\n"
+    "Наслаждайся 😎",
+    "en": "Welcome to Talkushka chat-bot 👋\n"
+    "What am I capable of? 🤔\n\n"
+    "🔹 I can download a video by YouTube link with required quality\n"
+    "🔹 I can download an audio by YouTube link\n"
+    "🔹 I can download subtitles by YouTube link\n"
+    "🔹 I can perform all the above for all YouTube channel videos.\n"
+    "🔹 I can make a transcription for your audio or video file 🥹\n\n"
+    "Enjoy 😎",
+}
 
-limits_info_message = {"ru": "Сейчас я нахожусь в режиме бета тестирования.\n"
-                             "Каждый день ты бесплатно можешь скачать {video_limit} видео, {audio_limit} аудио, "
-                             "{subtitle_limit} субтитров и сделать {transcription_limit} транскрипций.\n"
-                             "Лимиты обновляются в {reset_hour}:00 по Мск.",
-                       "en": "Now is beta testing time.\n"
-                             "Every day you can download {video_limit} videos, {audio_limit} audios, "
-                             "{subtitle_limit} subtitles and request {transcription_limit} transcriptions.\n"
-                             "Limits are reset on {reset_hour}:00 Moscow tz."
-                       }
+limits_info_message = {
+    "ru": "Сейчас я нахожусь в режиме бета тестирования.\n"
+    "Каждый день ты бесплатно можешь скачать {video_limit} видео, {audio_limit} аудио, "
+    "{subtitle_limit} субтитров и сделать {transcription_limit} транскрипций.\n"
+    "Лимиты обновляются в {reset_hour}:00 по Мск.",
+    "en": "Now is beta testing time.\n"
+    "Every day you can download {video_limit} videos, {audio_limit} audios, "
+    "{subtitle_limit} subtitles and request {transcription_limit} transcriptions.\n"
+    "Limits are reset on {reset_hour}:00 Moscow tz.",
+}
 
 provide_links = {
     "ru": "Вставь ссылку / ссылки в следующем сообщении (не забудь разделить их пробелом или переносом строки)",
@@ -49,36 +49,43 @@ provide_file = {
     "en": "Attach a file as a next message",
 }
 
-choose_video_button = {"ru": "🎥 хочу поработать с отдельными видео",
-                       "en": "🎥 handle a single video link"}
+choose_video_button = {"ru": "🎥 хочу поработать с отдельными видео", "en": "🎥 handle a single video link"}
 
-choose_channel_button = {"ru": "🦄 хочу поработать с каналом",
-                         "en": "🦄 handle a channel link"}
+choose_channel_button = {"ru": "🦄 хочу поработать с каналом", "en": "🦄 handle a channel link"}
 
-choose_file_button = {"ru": "🗂️ хочу загрузить файл и получить транскрипцию",
-                      "en": "🗂️ upload my file to get the transcription"}
+choose_file_button = {
+    "ru": "🗂️ хочу загрузить файл и получить транскрипцию",
+    "en": "🗂️ upload my file to get the transcription",
+}
 
-help_reply = {"ru": "Чтобы посмотреть инструкцию бота используй команду /start.\nИли выбери действие",
-              "en": "To check bot instruction use the /start command.\nOr choose an action"}
+help_reply = {
+    "ru": "Чтобы посмотреть инструкцию бота используй команду /start.\nИли выбери действие",
+    "en": "To check bot instruction use the /start command.\nOr choose an action",
+}
 
-change_language_reply = {"ru": "У тебя установлен язык '{lc}'",
-                         "en": "You current language setting if '{lc}'"}
+change_language_reply = {"ru": "У тебя установлен язык '{lc}'", "en": "You current language setting if '{lc}'"}
 
-language_changed = {"ru": "Вы успешно сменили язык бота на русский",
-                    "en": "Bot language has been successfully changed to English"}
+language_changed = {
+    "ru": "Вы успешно сменили язык бота на русский",
+    "en": "Bot language has been successfully changed to English",
+}
 
-contact_helpdesk_reply = {"ru": "Напиши свое обращение следующим сообщением",
-                          "en": "Describe your request in a single message"}
+contact_helpdesk_reply = {
+    "ru": "Напиши свое обращение следующим сообщением",
+    "en": "Describe your request in a single message",
+}
 
-validate_helpdesk_message_reply = \
-    {"ru": "Твое обращение:\n\n{r}\n\nМы также передадим id твоего чата и твой nickname.",
-     "en": "Your request:\n\n{r}\n\nYour nickname and chat_id will be passed to helpdesk."}
+validate_helpdesk_message_reply = {
+    "ru": "Твое обращение:\n\n{r}\n\nМы также передадим id твоего чата и твой nickname.",
+    "en": "Your request:\n\n{r}\n\nYour nickname and chat_id will be passed to helpdesk.",
+}
 
-helpdesk_sent_reply = {"ru": "Спасибо! Твое обращение успешно отправлено в поддержку.",
-                       "en": "Thanks! Your request has been successfully sent to helpdesk."}
+helpdesk_sent_reply = {
+    "ru": "Спасибо! Твое обращение успешно отправлено в поддержку.",
+    "en": "Thanks! Your request has been successfully sent to helpdesk.",
+}
 
-cancel_reply = {"ru": "Галя, у нас отмена!",
-                "en": "Cancelled"}
+cancel_reply = {"ru": "Галя, у нас отмена!", "en": "Cancelled"}
 
 helpdesk_mess = "🚨 Helpdesk request:\nusername:{un}\nuser_id {uid}\n\n"
 
@@ -190,13 +197,10 @@ def get_limit_reply(parameter: AppOperation, language_code: str) -> str:
 
 external_storage_ms = {
     "ru": "💥 Видео: {title}\nПрикрепляю ссылку на внешнее хранилище:\n{link}\n{message}",
-    "en": "💥 Video: {title}\nLink to external storage below:\n{link}\n{message}"
+    "en": "💥 Video: {title}\nLink to external storage below:\n{link}\n{message}",
 }
 
-create_promocode_msg = {
-    "ru": "Выбери как ты хочешь создать промокод",
-    "en": "Choose how you want to create promocode"
-}
+create_promocode_msg = {"ru": "Выбери как ты хочешь создать промокод", "en": "Choose how you want to create promocode"}
 
 custom_promocode = {
     "ru": "Введи промокод в следующем сообщении",
@@ -225,27 +229,24 @@ choose_promocode_total_use = {
 
 promocode = {
     "ru": "У тебя есть промокод? Отлично! Введи его следующим сообщением",
-    "en": "You have a promo code? Great! Please send it in the next message"
+    "en": "You have a promo code? Great! Please send it in the next message",
 }
 
 promocode_success = {
     "ru": "Вы успешно применили промокод.\nАктивирована подписка: {subscription}",
-    "en": "Promo code is applied successfully.\nSubscription activated: {subscription}"
+    "en": "Promo code is applied successfully.\nSubscription activated: {subscription}",
 }
 
-promocode_not_found = {
-    "ru": "Промокод не найден",
-    "en": "Promo code is not found"
-}
+promocode_not_found = {"ru": "Промокод не найден", "en": "Promo code is not found"}
 
 promocode_worse_subscription = {
     "ru": "Попробуйте применить другой промокод либо дождитесь окончания действия подписки",
-    "en": "Try to use another promocode or wait till the current subscription is expired"
+    "en": "Try to use another promocode or wait till the current subscription is expired",
 }
 
 subscription_expired = {
     "ru": "Ваша подписка истекла.\nЧтобы оформить новую подписку воспользуйся командой\n/GET_SUBSCRIPTION",
-    "en": "Your current subscription is expired.\nTo get a new one please use the command\n/GET_SUBSCRIPTION"
+    "en": "Your current subscription is expired.\nTo get a new one please use the command\n/GET_SUBSCRIPTION",
 }
 
 

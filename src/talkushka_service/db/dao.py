@@ -132,8 +132,7 @@ class UserDAO(BaseDAO):
     @classmethod
     @with_session
     async def get_helpdesk_and_admin(cls, session: AsyncSession) -> list[User]:
-        query = select(cls._model).where(
-            cls._model.privilege.in_([Privilege.helpdesk, Privilege.admin]))
+        query = select(cls._model).where(cls._model.privilege.in_([Privilege.helpdesk, Privilege.admin]))
         result = await session.scalars(query)
         return result.all()
 
@@ -187,7 +186,7 @@ class PromocodeDAO(BaseDAO):
 
     @classmethod
     @with_session
-    async def update_by_kwargs(cls, session: AsyncSession, id: int, **kwargs) -> Promocode:
+    async def update_by_kwargs(cls, session: AsyncSession, id: int, **kwargs) -> Promocode:  # noqa: A002
         query = select(cls._model).where(cls._model.id == id)
         result = await session.scalars(query)
         instance = result.first()
@@ -222,9 +221,6 @@ class UserLimitDAO(BaseDAO):
     @with_session
     async def reset_limits(cls, session: AsyncSession, video: int, audio: int, subtitle: int, transcription: int):
         update_stmt = update(cls._model).values(
-            video=video,
-            audio=audio,
-            subtitle=subtitle,
-            transcription=transcription
+            video=video, audio=audio, subtitle=subtitle, transcription=transcription
         )
         await session.execute(update_stmt)

@@ -17,10 +17,12 @@ from talkushka_service.model.objects import AppOperation
 
 async def create_user(message: Message | CallbackQuery):
     if not await UserDAO.get_one_or_none(user_id=message.from_user.id):
-        await UserDAO.add_by_kwargs(user_id=message.from_user.id,
-                                    chat_id=message.chat.id,
-                                    username=message.from_user.username,
-                                    lc="ru" if message.from_user.language_code == "ru" else "en")
+        await UserDAO.add_by_kwargs(
+            user_id=message.from_user.id,
+            chat_id=message.chat.id,
+            username=message.from_user.username,
+            lc="ru" if message.from_user.language_code == "ru" else "en",
+        )
         await UserLimitDAO.add_by_kwargs(user_id=message.from_user.id)
         logger.info("{user}:{id} added to database", user=message.from_user.username, id=message.from_user.id)
 
@@ -34,7 +36,7 @@ async def get_lc(msg: CallbackQuery | Message):
 
 
 async def change_user_lc(msg: CallbackQuery | Message, data: str):
-    user = await UserDAO.update_by_kwargs(user_id=msg.from_user.id, lc=data.split("_")[-1])
+    user = await UserDAO.update_by_kwargs(user_id=msg.from_user.id, lc=data.rsplit("_", maxsplit=1)[-1])
     return user.lc
 
 
@@ -68,12 +70,13 @@ async def apply_promocode(msg: Message | CallbackQuery, language_code: str):
         return
 
     if promocode := await PromocodeDAO.get_one_or_none(code=msg.text):
-        if user.subscription_id and \
-                (subscription := await SubscriptionDAO.get_one_or_none(id=user.subscription_id)):
+        if user.subscription_id and (subscription := await SubscriptionDAO.get_one_or_none(id=user.subscription_id)):
             logger.debug("found active subscription for user={user_id}", user_id=msg.from_user.id)
             if subscription.type.value >= promocode.type.value:
-                logger.info("try to apply promocode with type worse than actual subscription user_id={user_id}",
-                            user_id=msg.from_user.id)
+                logger.info(
+                    "try to apply promocode with type worse than actual subscription user_id={user_id}",
+                    user_id=msg.from_user.id,
+                )
                 await msg.answer(promocode_worse_subscription[language_code])
                 return
 
@@ -81,11 +84,15 @@ async def apply_promocode(msg: Message | CallbackQuery, language_code: str):
             asyncio.create_task(PromocodeDAO.update_by_kwargs(id=promocode.id, actual_use=promocode.actual_use + 1))
             new_subscription = await SubscriptionDAO.add_by_kwargs(type=promocode.type)
             asyncio.create_task(UserDAO.update_by_kwargs(user_id=user.user_id, subscription_id=new_subscription.id))
-            logger.info("subscription {type} is applied for user_id={user_id} by promocode",
-                        type=promocode.type,
-                        user_id=msg.from_user.id)
-            await msg.answer(promocode_success[language_code].format(
-                subscription=get_subscription_message(new_subscription.type, language_code))
+            logger.info(
+                "subscription {type} is applied for user_id={user_id} by promocode",
+                type=promocode.type,
+                user_id=msg.from_user.id,
+            )
+            await msg.answer(
+                promocode_success[language_code].format(
+                    subscription=get_subscription_message(new_subscription.type, language_code)
+                )
             )
             return
 
@@ -97,7 +104,7 @@ async def update_user_limits():
         video=settings.VIDEO_LIMIT,
         audio=settings.AUDIO_LIMIT,
         subtitle=settings.SUBTITLE_LIMIT,
-        transcription=settings.TRANSCRIPTION_LIMIT
+        transcription=settings.TRANSCRIPTION_LIMIT,
     )
 
 

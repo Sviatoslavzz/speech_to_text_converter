@@ -49,7 +49,7 @@ class AudioTransferStub(betterproto.ServiceStub):
         *,
         timeout: float | None = None,
         deadline: Optional["Deadline"] = None,
-        metadata: Optional["MetadataLike"] = None
+        metadata: Optional["MetadataLike"] = None,
     ) -> AsyncIterator[Response]:
         async for response in self._stream_stream(
             "/AudioTransfer/StreamAudio",
@@ -68,7 +68,7 @@ class AudioTransferStub(betterproto.ServiceStub):
         *,
         timeout: float | None = None,
         deadline: Optional["Deadline"] = None,
-        metadata: Optional["MetadataLike"] = None
+        metadata: Optional["MetadataLike"] = None,
     ) -> "HealthCheckResponse":
         return await self._unary_unary(
             "/AudioTransfer/HealthCheck",
@@ -81,21 +81,14 @@ class AudioTransferStub(betterproto.ServiceStub):
 
 
 class AudioTransferBase(ServiceBase):
-
-    async def stream_audio(
-        self, audio_chunk_iterator: AsyncIterator[AudioChunk]
-    ) -> AsyncIterator[Response]:
+    async def stream_audio(self, audio_chunk_iterator: AsyncIterator[AudioChunk]) -> AsyncIterator[Response]:
         raise grpclib.GRPCError(grpclib.const.Status.UNIMPLEMENTED)
         yield Response()
 
-    async def health_check(
-        self, health_check_request: "HealthCheckRequest"
-    ) -> "HealthCheckResponse":
+    async def health_check(self, health_check_request: "HealthCheckRequest") -> "HealthCheckResponse":
         raise grpclib.GRPCError(grpclib.const.Status.UNIMPLEMENTED)
 
-    async def __rpc_stream_audio(
-        self, stream: "grpclib.server.Stream[AudioChunk, Response]"
-    ) -> None:
+    async def __rpc_stream_audio(self, stream: "grpclib.server.Stream[AudioChunk, Response]") -> None:
         request = stream.__aiter__()
         await self._call_rpc_handler_server_stream(
             self.stream_audio,

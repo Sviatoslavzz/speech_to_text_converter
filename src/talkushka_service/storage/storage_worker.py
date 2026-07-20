@@ -30,8 +30,9 @@ class StorageWorker:
         return cls._instance
 
     def __init__(self, config: list[DropboxConfig]):
-        self.storages = [Storage(cls=storage_conf.cls(**storage_conf.model_dump(exclude={"cls"}))) for storage_conf in
-                         config]
+        self.storages = [
+            Storage(cls=storage_conf.cls(**storage_conf.model_dump(exclude={"cls"}))) for storage_conf in config
+        ]
         self._connected = False
         self._initialize_storages()
         self.timer = time.time()
@@ -88,15 +89,19 @@ class StorageWorker:
             try:
                 task.storage_link = await self.storages[0].cls.upload(task.local_path)
                 task.message.update(
-                    {"ru": f"ссылка действует {round(self.storages[0].cls.storage_time // MINUTE)} минут",
-                     "en": f"link is available for {round(self.storages[0].cls.storage_time // MINUTE)} minutes"}
+                    {
+                        "ru": f"ссылка действует {round(self.storages[0].cls.storage_time // MINUTE)} минут",
+                        "en": f"link is available for {round(self.storages[0].cls.storage_time // MINUTE)} minutes",
+                    }
                 )
                 task.local_path.unlink(missing_ok=True)
             except Exception as e:
                 logger.error("Exception while uploading file to storage {err}", err=e.__repr__())
                 task.message.update(
-                    {"ru": "Не получилось загрузить файл во внешнее хранилище.",
-                     "en": "Error while uploading file to external storage"}
+                    {
+                        "ru": "Не получилось загрузить файл во внешнее хранилище.",
+                        "en": "Error while uploading file to external storage",
+                    }
                 )
                 task.result = False
 
@@ -123,8 +128,7 @@ class StorageWorker:
             await self.update_space()
 
 
-async def storage_worker_as_target(task: DownloadTask | None,
-                                   config: dict[str, DropboxConfig]) -> DownloadTask | None:
+async def storage_worker_as_target(task: DownloadTask | None, config: dict[str, DropboxConfig]) -> DownloadTask | None:
     sw = StorageWorker.get_instance()
 
     if not sw:

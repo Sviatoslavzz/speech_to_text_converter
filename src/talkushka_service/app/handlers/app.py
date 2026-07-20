@@ -78,8 +78,12 @@ async def file_handler(message: Message, state: FSMContext):
 @app_router.message(UserRoute.videos)
 async def video_handler_links(message: Message, state: FSMContext):
     user_state = await state.get_data()
-    logger.info("{username}:{id}:video_handler_links:{option}", username=message.from_user.username,
-                id=message.from_user.id, option=user_state.get("option"))
+    logger.info(
+        "{username}:{id}:video_handler_links:{option}",
+        username=message.from_user.username,
+        id=message.from_user.id,
+        option=user_state.get("option"),
+    )
 
     lc_ = await get_lc(message)
     videos: list[YouTubeVideo] = []
@@ -91,8 +95,9 @@ async def video_handler_links(message: Message, state: FSMContext):
         elif not amount:
             await message.answer(rp.video_not_found_in_channel[lc_])
         else:
-            await message.answer(rp.channel_videos_found[lc_].format(amount=amount,
-                                                                     channel_name=videos[0].owner_username))
+            await message.answer(
+                rp.channel_videos_found[lc_].format(amount=amount, channel_name=videos[0].owner_username)
+            )
     elif user_state.get("option") == "video":
         async for result, link, video in AppWorker.get_instance().convert_links_to_videos(message.text):
             if not result:
@@ -126,16 +131,19 @@ async def file_receiver(message: Message, state: FSMContext):
 
     status, text_file_path = await AppWorker.get_instance().request_transcription_api(message, file)
     if status:
-        await message.answer_document(FSInputFile(path=text_file_path,
-                                                  filename=Path(file.file_name).with_suffix(
-                                                      text_file_path.suffix).__fspath__()))
+        await message.answer_document(
+            FSInputFile(
+                path=text_file_path, filename=Path(file.file_name).with_suffix(text_file_path.suffix).__fspath__()
+            )
+        )
         asyncio.create_task(decrease_limit(message.from_user.id, AppOperation.TRANSCRIPTION, 1))
         asyncio.create_task(AppWorker.get_instance().remove_file(text_file_path))
         logger.info("{user}:{id}:transcription sent", user=message.from_user.username, id=message.from_user.id)
     else:
         await message.answer(rp.transcriber_unavailable[lc_])
-        logger.warning("{user}:{id}:failed to sent transcription", user=message.from_user.username,
-                       id=message.from_user.id)
+        logger.warning(
+            "{user}:{id}:failed to sent transcription", user=message.from_user.username, id=message.from_user.id
+        )
 
     await message.delete()
 
@@ -153,7 +161,7 @@ async def video_options_handler(callback: CallbackQuery, state: FSMContext):
         await sent.delete()
         await callback.message.answer(
             text=rp.available_options[lc_].format(title=user_state["videos"][0].title),
-            reply_markup=generate_option_keyboard(options)
+            reply_markup=generate_option_keyboard(options),
         )
         await state.update_data(video_options=options)
         await state.set_state(UserRoute.single_video_options)
@@ -170,8 +178,7 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
     videos = user_state.get("videos", [])
 
     if not await validate_limit(callback.from_user.id, AppOperation.VIDEO):
-        await callback.bot.send_message(chat_id=callback.from_user.id,
-                                        text=rp.video_limit[lc_])
+        await callback.bot.send_message(chat_id=callback.from_user.id, text=rp.video_limit[lc_])
         await state.clear()
         return
 
@@ -185,9 +192,7 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
         await state.update_data(video_options=options)
         await state.set_state(UserRoute.single_video_options)
     elif callback.data == "multi_option" and videos:
-        await callback.message.answer(
-            rp.option_search_expl[lc_], reply_markup=standard_video_options_menu
-        )
+        await callback.message.answer(rp.option_search_expl[lc_], reply_markup=standard_video_options_menu)
         await state.set_state(UserRoute.multi_video_options)
     elif callback.data == "cancel":
         await callback.message.answer(rp.cancel_reply[lc_])
@@ -196,8 +201,9 @@ async def download_video_handler(callback: CallbackQuery, state: FSMContext):
 
 @app_router.callback_query(UserRoute.single_video_options)
 async def download_video_with_single_option(callback: CallbackQuery, state: FSMContext):
-    logger.info("{username}:{id}:callback:single_video_options", username=callback.from_user.username,
-                id=callback.from_user.id)
+    logger.info(
+        "{username}:{id}:callback:single_video_options", username=callback.from_user.username, id=callback.from_user.id
+    )
     lc_ = await get_lc(callback)
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer(rp.in_progress[lc_])
@@ -226,30 +232,33 @@ async def download_video_with_single_option(callback: CallbackQuery, state: FSMC
 
 @app_router.callback_query(UserRoute.multi_video_options)
 async def download_video_with_multi_option(callback: CallbackQuery, state: FSMContext):
-    logger.info("{username}:{id}:callback:multi_video_options", username=callback.from_user.username,
-                id=callback.from_user.id)
+    logger.info(
+        "{username}:{id}:callback:multi_video_options", username=callback.from_user.username, id=callback.from_user.id
+    )
     lc_ = await get_lc(callback)
     await callback.answer("🚀", show_alert=True)
     await callback.message.answer(rp.in_progress[lc_])
     user_state = await state.get_data()
     width, height, fps = map(int, callback.data.split(":"))
     await state.clear()
-    await check_privilege_and_load(callback=callback,
-                                   language_code=lc_,
-                                   worker=AppWorker.get_instance().download_video_worker,
-                                   videos=user_state.get("videos", []),
-                                   options=VideoOptions(width=width, height=height, fps=fps))
+    await check_privilege_and_load(
+        callback=callback,
+        language_code=lc_,
+        worker=AppWorker.get_instance().download_video_worker,
+        videos=user_state.get("videos", []),
+        options=VideoOptions(width=width, height=height, fps=fps),
+    )
 
 
 @app_router.callback_query(F.data == "download_audio", UserRoute.action)
 async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
-    logger.info("{username}:{id} callback : download_audio", username=callback.from_user.username,
-                id=callback.from_user.id)
+    logger.info(
+        "{username}:{id} callback : download_audio", username=callback.from_user.username, id=callback.from_user.id
+    )
     lc_ = await get_lc(callback)
 
     if not await validate_limit(callback.from_user.id, AppOperation.AUDIO):
-        await callback.bot.send_message(chat_id=callback.from_user.id,
-                                        text=rp.audio_limit[lc_])
+        await callback.bot.send_message(chat_id=callback.from_user.id, text=rp.audio_limit[lc_])
         await state.clear()
         return
 
@@ -257,21 +266,23 @@ async def download_audio_handler(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer(rp.in_progress[lc_])
-    await check_privilege_and_load(callback=callback,
-                                   language_code=lc_,
-                                   worker=AppWorker.get_instance().download_audio_worker,
-                                   videos=user_state.get("videos", []))
+    await check_privilege_and_load(
+        callback=callback,
+        language_code=lc_,
+        worker=AppWorker.get_instance().download_audio_worker,
+        videos=user_state.get("videos", []),
+    )
 
 
 @app_router.callback_query(F.data == "download_subtitle", UserRoute.action)
 async def download_subtitle_handler(callback: CallbackQuery, state: FSMContext):
-    logger.info("{username}:{id} callback : download_subtitle", username=callback.from_user.username,
-                id=callback.from_user.id)
+    logger.info(
+        "{username}:{id} callback : download_subtitle", username=callback.from_user.username, id=callback.from_user.id
+    )
     lc_ = await get_lc(callback)
 
     if not await validate_limit(callback.from_user.id, AppOperation.SUBTITLE):
-        await callback.bot.send_message(chat_id=callback.from_user.id,
-                                        text=rp.subtitle_limit[lc_])
+        await callback.bot.send_message(chat_id=callback.from_user.id, text=rp.subtitle_limit[lc_])
         await state.clear()
         return
 
@@ -279,16 +290,22 @@ async def download_subtitle_handler(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer("🚀", show_alert=False)
     await callback.message.answer(rp.in_progress[lc_])
-    await check_privilege_and_load(callback=callback,
-                                   language_code=lc_,
-                                   worker=AppWorker.get_instance().download_subtitles_worker,
-                                   videos=user_state.get("videos", []))
+    await check_privilege_and_load(
+        callback=callback,
+        language_code=lc_,
+        worker=AppWorker.get_instance().download_subtitles_worker,
+        videos=user_state.get("videos", []),
+    )
 
 
 @app_router.message()
 async def any_mes(message: Message):
-    logger.info("{username}:{id}:message:{text}", username=message.from_user.username,
-                id=message.from_user.id, text=message.text)
+    logger.info(
+        "{username}:{id}:message:{text}",
+        username=message.from_user.username,
+        id=message.from_user.id,
+        text=message.text,
+    )
     sent = await message.answer("🤔")
     await asyncio.sleep(5)
     await message.delete()

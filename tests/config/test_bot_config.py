@@ -5,9 +5,7 @@ from talkushka_service.config.models import BotConfig
 
 
 def test_bot_config_default():
-    data = {
-        "token_env": "token_env"
-    }
+    data = {"token_env": "token_env"}
     conf = BotConfig(**data)
     assert conf.server == "telegram"
     assert not conf.host
@@ -30,7 +28,8 @@ def test_bot_config():
 
 
 @pytest.mark.parametrize(
-    "data", [
+    "data",
+    [
         {
             "server": "local",
             "host": "127.0.0.1",
@@ -43,8 +42,8 @@ def test_bot_config():
         },
         {
             "server": "telegram",
-        }
-    ]
+        },
+    ],
 )
 def test_bot_config_raise(data):
     with pytest.raises(ValidationError):

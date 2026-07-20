@@ -5,9 +5,7 @@ from talkushka_service.config.models import YouTubeConfig
 
 
 def test_youtube_config_default():
-    data = {
-        "api_key_env": "api_key_env"
-    }
+    data = {"api_key_env": "api_key_env"}
     conf = YouTubeConfig(**data)
 
     assert conf.api_key_env == "test_api_key"

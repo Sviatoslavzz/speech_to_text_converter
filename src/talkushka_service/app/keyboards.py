@@ -7,7 +7,9 @@ from talkushka_service.model.objects import VideoOptions
 main_menu = {
     "ru": ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text=choose_video_button["ru"]), ],
+            [
+                KeyboardButton(text=choose_video_button["ru"]),
+            ],
             [KeyboardButton(text=choose_channel_button["ru"])],
             [KeyboardButton(text=choose_file_button["ru"])],
         ],
@@ -22,7 +24,7 @@ main_menu = {
         ],
         resize_keyboard=True,
         input_field_placeholder="Choose an action...",
-    )
+    ),
 }
 
 help_menu = {
@@ -69,24 +71,26 @@ action_menu = {
             [InlineKeyboardButton(text="🎧 download audio", callback_data="download_audio")],
             [InlineKeyboardButton(text="💬 download subtitles", callback_data="download_subtitle")],
         ]
-    )
+    ),
 }
 
 option_chooser_menu = {
     "ru": InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="🥷🏼 Выбирать качество отдельно для каждого видео",
-                                  callback_data="single_option")],
+            [
+                InlineKeyboardButton(
+                    text="🥷🏼 Выбирать качество отдельно для каждого видео", callback_data="single_option"
+                )
+            ],
             [InlineKeyboardButton(text="🗿 Выбрать качество для всех сразу", callback_data="multi_option")],
         ]
     ),
     "en": InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="🥷🏼 Choose quality for a single video",
-                                  callback_data="single_option")],
+            [InlineKeyboardButton(text="🥷🏼 Choose quality for a single video", callback_data="single_option")],
             [InlineKeyboardButton(text="🗿 Choose quality for all videos once", callback_data="multi_option")],
         ]
-    )
+    ),
 }
 
 standard_video_options_menu = InlineKeyboardMarkup(
@@ -126,7 +130,7 @@ proceed_simple_menu = {
             [InlineKeyboardButton(text="🥷🏼 Yes", callback_data="single_option")],
             [InlineKeyboardButton(text="🗿 No", callback_data="cancel")],
         ]
-    )
+    ),
 }
 
 
@@ -173,14 +177,11 @@ create_promocode = {
     ),
 }
 
+
 def get_subscription_type_as_kb():
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text=s_type.name, callback_data=f"{s_type.name}_{s_type.value}"
-                )
-            ]
+            [InlineKeyboardButton(text=s_type.name, callback_data=f"{s_type.name}_{s_type.value}")]
             for s_type in SubscriptionType
         ]
     )

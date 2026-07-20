@@ -18,7 +18,6 @@ from talkushka_service.utils.functions import get_project_root
 
 
 class GrpcClient:
-
     def __init__(self, config: GrpcConfig):
         self.config = config
         self.__whisper_channel = None
@@ -48,8 +47,9 @@ class GrpcClient:
     async def __connect(self):
         try:
             if not self.__connected:
-                self.__whisper_channel = Channel(host=self.config.host, port=self.config.port,
-                                                 ssl=self.__get_ssl_context())
+                self.__whisper_channel = Channel(
+                    host=self.config.host, port=self.config.port, ssl=self.__get_ssl_context()
+                )
                 self.__whisper_stub = AudioTransferStub(self.__whisper_channel)
                 self.__connected = await self.is_whisper_connected()
                 logger.info("Connected to gRPC {host}:{port}", host=self.config.host, port=self.config.port)

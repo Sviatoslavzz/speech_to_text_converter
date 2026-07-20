@@ -10,6 +10,7 @@ from talkushka_service.app.states import PromocodeRoute
 
 use_promocode_router = Router()
 
+
 @use_promocode_router.message(Command("promocode"))
 async def command_promocode_handler(message: Message, state: FSMContext):
     """

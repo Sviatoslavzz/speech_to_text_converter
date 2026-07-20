@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
+from typing_extensions import deprecated
+
 MINUTE = 60
 HOUR = MINUTE * 60
 MB = 1024 * 1024
@@ -13,6 +15,7 @@ class AppOperation(Enum):
     VIDEO = "video"
     SUBTITLE = "subtitle"
 
+
 @dataclass(slots=True)
 class YouTubeVideo:
     id: str
@@ -23,6 +26,10 @@ class YouTubeVideo:
     channel_id: str
     kind: str
 
+    def __post_init__(self):
+        self.link = f"https://www.youtube.com/watch?v={self.id}"
+
+    @deprecated("Use __post_init__ instead")
     def generate_link(self) -> str:
         self.link = f"https://www.youtube.com/watch?v={self.id}"
         return self.link
